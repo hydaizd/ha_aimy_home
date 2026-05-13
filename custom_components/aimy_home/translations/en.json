@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aimy device setup",
+        "description": "By selecting **Submit**, we will attempt to get the device list from the designated Aimy smart box host.",
+        "data": {
+          "host": "Aimy smart box host address"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "This integration only allow single instance."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Aimy device setup.",
+        "description": "By1 selecting **Submit**, we will attempt to get the device list from the designated Aimy smart host.",
+        "data": {
+          "host": "Aimy smart box host address."
+        }
+      }
+    }
+  }
+}

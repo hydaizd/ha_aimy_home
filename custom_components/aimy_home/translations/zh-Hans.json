@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "智空间设备设置",
+        "description": "通过选择**提交**，我们将尝试从指定的智能盒子中获取设备列表。",
+        "data": {
+          "host": "智能盒子主机地址"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "仅允许一个实例。"
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "智空间设备设置.",
+        "description": "通过1选择**提交**，我们将尝试从指定的智能主机中获取设备列表。",
+        "data": {
+          "host": "智能主机主机地址"
+        }
+      }
+    }
+  }
+}

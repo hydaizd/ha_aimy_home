@@ -1,0 +1,13 @@
+{
+  "domain": "aimy_home",
+  "name": "艾美智空间",
+  "config_flow": true,
+  "documentation": "https://github.com/hydaizd/ha_aimy_home",
+  "issue_tracker": "https://github.com/hydaizd/ha_aimy_home/issues",
+  "dependencies": [],
+  "codeowners": [
+    "@271357630@qq.com"
+  ],
+  "requirements": [],
+  "version": "v1.0.0"
+}
