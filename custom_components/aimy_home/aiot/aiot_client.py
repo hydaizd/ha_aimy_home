@@ -396,7 +396,13 @@ class AIoTClient:
             )
         return False
 
-    async def set_prop_async(self, did: str, aam_cmd: str, group_id: str, json_data: dict) -> bool:
+    async def set_prop_async(
+            self,
+            did: str,
+            snnd: str,
+            group_id: str,
+            json_data: dict
+    ) -> bool:
         if did not in self._device_list_cache:
             raise AIoTClientError(f'did not exist, {did}')
 
@@ -406,7 +412,7 @@ class AIoTClient:
             did_strs: list[str] = did.split('.')
             result = await self._http.set_prop_async(
                 params={
-                    "cmd": aam_cmd,
+                    "cmd": snnd,
                     "midBindId": did_strs[0],
                     "endpointId": did_strs[1],
                     "groupId": group_id,
@@ -414,14 +420,16 @@ class AIoTClient:
 
                 }
             )
-            _LOGGER.debug('ctrl: %s, %s, %s -> %s', did, aam_cmd, json_data, result)
+            _LOGGER.debug('ctrl: %s, %s, %s -> %s', did, snnd, json_data, result)
             rs = result.get('success', False)
             if rs:
                 return True
             if rs in ['false']:
                 # 设备移除或离线
                 _LOGGER.error('device may be removed or offline, %s', did)
-                self._main_loop.create_task(await self.__refresh_lan_device_with_dids_async(dids=[did]))
+                self._main_loop.create_task(
+                    await self.__refresh_lan_device_with_dids_async(dids=[did])
+                )
             raise AIoTClientError(
                 self.__get_exec_error_with_rc(rc=rs))
 
@@ -431,16 +439,21 @@ class AIoTClient:
             f'{self._i18n.translate("error.common.-10007")}'
         )
 
-    def request_refresh_prop(self, did: str, aam_cmd: str, aam_prop_name: str) -> None:
+    def request_refresh_prop(
+            self,
+            did: str,
+            snnd: str,
+            pnnd: str
+    ) -> None:
         if did not in self._device_list_cache:
             raise AIoTClientError(f'did not exist, {did}')
-        key: str = f'{did}|{aam_cmd}|{aam_prop_name}'
+        key: str = f'{did}|{snnd}|{pnnd}'
         if key in self._refresh_props_list:
             return
         self._refresh_props_list[key] = {
             'did': did,
-            'aam_cmd': aam_cmd,
-            'aam_prop_name': aam_prop_name
+            'snnd': snnd,
+            'pnnd': pnnd
         }
         if self._refresh_props_timer:
             return
@@ -449,7 +462,12 @@ class AIoTClient:
             lambda: self._main_loop.create_task(self.__refresh_props_handler())
         )
 
-    async def get_prop_async(self, did: str, aam_cmd: str, aam_prop_name: str) -> Any:
+    async def get_prop_async(
+            self,
+            did: str,
+            snnd: str,
+            pnnd: str
+    ) -> Any:
         if did not in self._device_list_cache:
             raise AIoTClientError(f'did not exist, {did}')
 
@@ -457,8 +475,8 @@ class AIoTClient:
             if self._network.network_status:
                 result = await self._http.get_prop_async(
                     did=did,
-                    aam_cmd=aam_cmd,
-                    aam_prop_name=aam_prop_name
+                    snnd=snnd,
+                    pnnd=pnnd
                 )
                 if result:
                     return result
@@ -470,7 +488,8 @@ class AIoTClient:
     async def action_async(
             self,
             did: str,
-            aam_cmd: str,
+            snnd: str,
+            annd: str,
             in_list: list
     ) -> list:
         if did not in self._device_list_cache:
@@ -481,7 +500,8 @@ class AIoTClient:
         if device_lan and device_lan.get('online', False):
             result: dict = await self._http.action_async(
                 did=did,
-                aam_cmd=aam_cmd,
+                snnd=snnd,
+                annd=annd,
                 in_list=in_list
             )
             if result:
@@ -494,18 +514,17 @@ class AIoTClient:
                     self._main_loop.create_task(
                         await self.__refresh_lan_device_with_dids_async(dids=[did])
                     )
-                raise AIoTClientError(
-                    self.__get_exec_error_with_rc(rc=rc))
+                raise AIoTClientError(self.__get_exec_error_with_rc(rc=rc))
         # TODO: Show error message
-        _LOGGER.error('client action failed, %s, %s', did, aam_cmd)
+        _LOGGER.error('client action failed, %s, %s', did, snnd)
         return []
 
     def sub_prop(
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None,
+            snnd: Optional[str] = None,
+            pnnd: Optional[str] = None,
             handler_ctx: Any = None
     ) -> bool:
         if did not in self._device_list_cache:
@@ -513,7 +532,7 @@ class AIoTClient:
 
         topic = (
             f'{did}/p/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
+            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}')
         self._sub_tree[topic] = AIoTClientSub(topic=topic, handler=handler, handler_ctx=handler_ctx)
         _LOGGER.debug('client sub prop, %s', topic)
         return True
@@ -521,12 +540,12 @@ class AIoTClient:
     def unsub_prop(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            pnnd: Optional[str] = None
     ) -> bool:
         topic = (
             f'{did}/p/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
+            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}')
         if self._sub_tree.get(topic=topic):
             del self._sub_tree[topic]
         _LOGGER.debug('client unsub prop, %s', topic)
@@ -536,29 +555,28 @@ class AIoTClient:
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None,
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None,
             handler_ctx: Any = None
     ) -> bool:
         if did not in self._device_list_cache:
             raise AIoTClientError(f'did not exist, {did}')
         topic = (
             f'{did}/e/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
-        self._sub_tree[topic] = AIoTClientSub(
-            topic=topic, handler=handler, handler_ctx=handler_ctx)
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
+        self._sub_tree[topic] = AIoTClientSub(topic=topic, handler=handler, handler_ctx=handler_ctx)
         _LOGGER.debug('client sub event, %s', topic)
         return True
 
     def unsub_event(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None
     ) -> bool:
         topic = (
             f'{did}/e/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
         if self._sub_tree.get(topic=topic):
             del self._sub_tree[topic]
         _LOGGER.debug('client unsub event, %s', topic)
@@ -824,8 +842,9 @@ class AIoTClient:
             sub = self._sub_device_state.get(did, None)
             if sub and sub.handler:
                 sub.handler(
-                    did, AIoTDeviceState.ONLINE if state_new
-                    else AIoTDeviceState.OFFLINE, sub.handler_ctx
+                    did,
+                    AIoTDeviceState.ONLINE if state_new else AIoTDeviceState.OFFLINE,
+                    sub.handler_ctx
                 )
         # 新设备
         self._device_list_lan.update(lan_list)
@@ -912,8 +931,10 @@ class AIoTClient:
                         or 'aamPropValue' not in result
                 ):
                     continue
+                # 请求成功，从列表弹出
                 request_list.pop(
-                    f'{result["macAddr"]}|{result['endPointPort']}|{result["aamCmd"]}|{result["aamPropName"]}', None)
+                    f'{result["macAddr"]}|{result['endPointPort']}|{result["aamCmd"]}|{result["aamPropName"]}', None
+                )
                 self.__on_prop_msg(params=result, ctx=None)
             if request_list:
                 _LOGGER.info('refresh props failed, cloud, %s', list(request_list.keys()))

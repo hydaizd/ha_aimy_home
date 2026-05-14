@@ -31,7 +31,8 @@ class AIoTStorage:
     _root_path: str
 
     def __init__(
-            self, root_path: str,
+            self,
+            root_path: str,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> None:
         """初始化文件管理."""
@@ -43,13 +44,20 @@ class AIoTStorage:
 
         _LOGGER.debug('root path, %s', self._root_path)
 
-    def __get_full_path(self, domain: str, name: str, suffix: str) -> str:
+    def __get_full_path(
+            self,
+            domain: str,
+            name: str,
+            suffix: str
+    ) -> str:
         """获取文件完整路径."""
-        return os.path.join(
-            self._root_path, domain, f'{name}.{suffix}')
+        return os.path.join(self._root_path, domain, f'{name}.{suffix}')
 
     def __add_file_future(
-            self, key: str, op_type: AIoTStorageType, fut: asyncio.Future
+            self,
+            key: str,
+            op_type: AIoTStorageType,
+            fut: asyncio.Future
     ) -> None:
         """添加文件异步操作."""
 
@@ -61,7 +69,10 @@ class AIoTStorage:
         self._file_future[key] = op_type, fut
 
     def __load(
-            self, full_path: str, type_: type = bytes, with_hash_check: bool = True
+            self,
+            full_path: str,
+            type_: type = bytes,
+            with_hash_check: bool = True
     ) -> Union[bytes, str, dict, list, None]:
         """加载文件."""
         if not os.path.exists(full_path):
@@ -84,8 +95,7 @@ class AIoTStorage:
                     data_bytes = r_data[:-32]
                     hash_value = r_data[-32:]
                     if hashlib.sha256(data_bytes).digest() != hash_value:
-                        _LOGGER.error(
-                            'load error, hash check failed, %s', full_path)
+                        _LOGGER.error('load error, hash check failed, %s', full_path)
                         return None
                 else:
                     data_bytes = r_data
@@ -95,27 +105,30 @@ class AIoTStorage:
                     return str(data_bytes, 'utf-8')
                 if type_ in [dict, list]:
                     return json.loads(data_bytes)
-                _LOGGER.error(
-                    'load error, unsupported data type, %s', type_.__name__)
+                _LOGGER.error('load error, unsupported data type, %s', type_.__name__)
                 return None
         except (OSError, TypeError) as e:
             _LOGGER.error('load error, %s, %s', e, traceback.format_exc())
             return None
 
     def load(
-            self, domain: str, name: str, type_: type = bytes
+            self,
+            domain: str,
+            name: str,
+            type_: type = bytes
     ) -> Union[bytes, str, dict, list, None]:
         """加载文件."""
-        full_path = self.__get_full_path(
-            domain=domain, name=name, suffix=type_.__name__)
+        full_path = self.__get_full_path(domain=domain, name=name, suffix=type_.__name__)
         return self.__load(full_path=full_path, type_=type_)
 
     async def load_async(
-            self, domain: str, name: str, type_: type = bytes
+            self,
+            domain: str,
+            name: str,
+            type_: type = bytes
     ) -> Union[bytes, str, dict, list, None]:
         """异步加载文件."""
-        full_path = self.__get_full_path(
-            domain=domain, name=name, suffix=type_.__name__)
+        full_path = self.__get_full_path(domain=domain, name=name, suffix=type_.__name__)
         if full_path in self._file_future:
             # Waiting for the last task to be completed
             op_type, fut = self._file_future[full_path]
@@ -124,15 +137,17 @@ class AIoTStorage:
                     return await fut
             else:
                 await fut
-        fut = self._main_loop.run_in_executor(
-            None, self.__load, full_path, type_)
+        fut = self._main_loop.run_in_executor(None, self.__load, full_path, type_)
         if not fut.done():
             self.__add_file_future(full_path, AIoTStorageType.LOAD, fut)
         return await fut
 
     def __save(
-            self, full_path: str, data: Union[bytes, str, dict, list, None],
-            cover: bool = True, with_hash: bool = True
+            self,
+            full_path: str,
+            data: Union[bytes, str, dict, list, None],
+            cover: bool = True,
+            with_hash: bool = True
     ) -> bool:
         """保存文件."""
         if data is None:
@@ -156,9 +171,7 @@ class AIoTStorage:
             elif isinstance(data, (dict, list)):
                 w_bytes = json.dumps(data).encode('utf-8')
             else:
-                _LOGGER.error(
-                    'save error, unsupported data type, %s',
-                    type(data).__name__)
+                _LOGGER.error('save error, unsupported data type, %s', type(data).__name__)
                 return False
             with open(full_path, 'wb') as w_file:
                 w_file.write(w_bytes)
@@ -170,25 +183,28 @@ class AIoTStorage:
             return False
 
     def save(
-            self, domain: str, name: str, data: Union[bytes, str, dict, list, None]
+            self,
+            domain: str,
+            name: str,
+            data: Union[bytes, str, dict, list, None]
     ) -> bool:
         """保存文件."""
-        full_path = self.__get_full_path(
-            domain=domain, name=name, suffix=type(data).__name__)
+        full_path = self.__get_full_path(domain=domain, name=name, suffix=type(data).__name__)
         return self.__save(full_path=full_path, data=data)
 
     async def save_async(
-            self, domain: str, name: str, data: Union[bytes, str, dict, list, None]
+            self,
+            domain: str,
+            name: str,
+            data: Union[bytes, str, dict, list, None]
     ) -> bool:
         """异步保存文件."""
-        full_path = self.__get_full_path(
-            domain=domain, name=name, suffix=type(data).__name__)
+        full_path = self.__get_full_path(domain=domain, name=name, suffix=type(data).__name__)
         if full_path in self._file_future:
             # Waiting for the last task to be completed
             fut = self._file_future[full_path][1]
             await fut
-        fut = self._main_loop.run_in_executor(
-            None, self.__save, full_path, data)
+        fut = self._main_loop.run_in_executor(None, self.__save, full_path, data)
         if not fut.done():
             self.__add_file_future(full_path, AIoTStorageType.SAVE, fut)
         return await fut
@@ -200,13 +216,22 @@ class AIoTStorage:
             item.unlink()
         return True
 
-    def remove(self, domain: str, name: str, type_: type) -> bool:
+    def remove(
+            self,
+            domain: str,
+            name: str,
+            type_: type
+    ) -> bool:
         """删除文件."""
-        full_path = self.__get_full_path(
-            domain=domain, name=name, suffix=type_.__name__)
+        full_path = self.__get_full_path(domain=domain, name=name, suffix=type_.__name__)
         return self.__remove(full_path=full_path)
 
-    async def remove_async(self, domain: str, name: str, type_: type) -> bool:
+    async def remove_async(
+            self,
+            domain: str,
+            name: str,
+            type_: type
+    ) -> bool:
         """异步删除文件."""
         full_path = self.__get_full_path(
             domain=domain, name=name, suffix=type_.__name__)
@@ -257,7 +282,11 @@ class AIoTStorage:
             self.__add_file_future(full_path, AIoTStorageType.DEL, fut)
         return await fut
 
-    def get_names(self, domain: str, type_: type) -> list[str]:
+    def get_names(
+            self,
+            domain: str,
+            type_: type
+    ) -> list[str]:
         """获取所有文件名."""
         path: str = os.path.join(self._root_path, domain)
         type_str = f'.{type_.__name__}'
@@ -268,13 +297,19 @@ class AIoTStorage:
             names.append(item.name.replace(type_str, ''))
         return names
 
-    def file_exists(self, domain: str, name_with_suffix: str) -> bool:
+    def file_exists(
+            self,
+            domain: str,
+            name_with_suffix: str
+    ) -> bool:
         """检查文件是否存在."""
-        return os.path.exists(
-            os.path.join(self._root_path, domain, name_with_suffix))
+        return os.path.exists(os.path.join(self._root_path, domain, name_with_suffix))
 
     def save_file(
-            self, domain: str, name_with_suffix: str, data: bytes
+            self,
+            domain: str,
+            name_with_suffix: str,
+            data: bytes
     ) -> bool:
         """保存文件."""
         if not isinstance(data, bytes):
@@ -284,7 +319,10 @@ class AIoTStorage:
         return self.__save(full_path=full_path, data=data, with_hash=False)
 
     async def save_file_async(
-            self, domain: str, name_with_suffix: str, data: bytes
+            self,
+            domain: str,
+            name_with_suffix: str,
+            data: bytes
     ) -> bool:
         """异步保存文件."""
         if not isinstance(data, bytes):
@@ -301,15 +339,19 @@ class AIoTStorage:
             self.__add_file_future(full_path, AIoTStorageType.SAVE_FILE, fut)
         return await fut
 
-    def load_file(self, domain: str, name_with_suffix: str) -> Optional[bytes]:
+    def load_file(
+            self,
+            domain: str,
+            name_with_suffix: str
+    ) -> Optional[bytes]:
         """加载文件."""
         full_path = os.path.join(self._root_path, domain, name_with_suffix)
-        return self.__load(
-            full_path=full_path, type_=bytes,
-            with_hash_check=False)  # type: ignore
+        return self.__load(full_path=full_path, type_=bytes, with_hash_check=False)  # type: ignore
 
     async def load_file_async(
-            self, domain: str, name_with_suffix: str
+            self,
+            domain: str,
+            name_with_suffix: str
     ) -> Optional[bytes]:
         """异步加载文件."""
         full_path = os.path.join(self._root_path, domain, name_with_suffix)
@@ -327,13 +369,19 @@ class AIoTStorage:
             self.__add_file_future(full_path, AIoTStorageType.LOAD_FILE, fut)
         return await fut  # type: ignore
 
-    def remove_file(self, domain: str, name_with_suffix: str) -> bool:
+    def remove_file(
+            self,
+            domain: str,
+            name_with_suffix: str
+    ) -> bool:
         """删除文件."""
         full_path = os.path.join(self._root_path, domain, name_with_suffix)
         return self.__remove(full_path=full_path)
 
     async def remove_file_async(
-            self, domain: str, name_with_suffix: str
+            self,
+            domain: str,
+            name_with_suffix: str
     ) -> bool:
         """异步删除文件."""
         full_path = os.path.join(self._root_path, domain, name_with_suffix)
@@ -377,7 +425,10 @@ class AIoTStorage:
         return await fut
 
     def update_user_config(
-            self, uname: str, lan_server: str, config: Optional[dict[str, Any]],
+            self,
+            uname: str,
+            lan_server: str,
+            config: Optional[dict[str, Any]],
             replace: bool = False
     ) -> bool:
         """更新用户配置."""
@@ -389,20 +440,19 @@ class AIoTStorage:
         config_name = f'{uname}_{lan_server}'
         if config is None:
             # Remove config file
-            return self.remove(
-                domain=config_domain, name=config_name, type_=dict)
+            return self.remove(domain=config_domain, name=config_name, type_=dict)
         if replace:
             # Replace config file
-            return self.save(
-                domain=config_domain, name=config_name, data=config)
-        local_config = (self.load(domain=config_domain,
-                                  name=config_name, type_=dict)) or {}
+            return self.save(domain=config_domain, name=config_name, data=config)
+        local_config = (self.load(domain=config_domain, name=config_name, type_=dict)) or {}
         local_config.update(config)  # type: ignore
-        return self.save(
-            domain=config_domain, name=config_name, data=local_config)
+        return self.save(domain=config_domain, name=config_name, data=local_config)
 
     async def update_user_config_async(
-            self, uname: str, lan_server: str, config: Optional[dict[str, Any]],
+            self,
+            uname: str,
+            lan_server: str,
+            config: Optional[dict[str, Any]],
             replace: bool = False
     ) -> bool:
         """更新用户配置."""
@@ -414,20 +464,19 @@ class AIoTStorage:
         config_name = f'{uname}_{lan_server}'
         if config is None:
             # Remove config file
-            return await self.remove_async(
-                domain=config_domain, name=config_name, type_=dict)
+            return await self.remove_async(domain=config_domain, name=config_name, type_=dict)
         if replace:
             # Replace config file
-            return await self.save_async(
-                domain=config_domain, name=config_name, data=config)
-        local_config = (await self.load_async(
-            domain=config_domain, name=config_name, type_=dict)) or {}
+            return await self.save_async(domain=config_domain, name=config_name, data=config)
+        local_config = (await self.load_async(domain=config_domain, name=config_name, type_=dict)) or {}
         local_config.update(config)  # type: ignore
-        return await self.save_async(
-            domain=config_domain, name=config_name, data=local_config)
+        return await self.save_async(domain=config_domain, name=config_name, data=local_config)
 
     def load_user_config(
-            self, uname: str, lan_server: str, keys: Optional[list[str]] = None
+            self,
+            uname: str,
+            lan_server: str,
+            keys: Optional[list[str]] = None
     ) -> dict[str, Any]:
         """加载用户配置."""
         if isinstance(keys, list) and len(keys) == 0:
@@ -435,8 +484,7 @@ class AIoTStorage:
             return {}
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
-        local_config = (self.load(domain=config_domain,
-                                  name=config_name, type_=dict))
+        local_config = (self.load(domain=config_domain, name=config_name, type_=dict))
         if not isinstance(local_config, dict):
             return {}
         if keys is None:
@@ -446,7 +494,10 @@ class AIoTStorage:
             if key in local_config}
 
     async def load_user_config_async(
-            self, uname: str, lan_server: str, keys: Optional[list[str]] = None
+            self,
+            uname: str,
+            lan_server: str,
+            keys: Optional[list[str]] = None
     ) -> dict:
         """加载用户配置."""
         if isinstance(keys, list) and len(keys) == 0:
@@ -454,8 +505,7 @@ class AIoTStorage:
             return {}
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
-        local_config = (await self.load_async(
-            domain=config_domain, name=config_name, type_=dict))
+        local_config = (await self.load_async(domain=config_domain, name=config_name, type_=dict))
         if not isinstance(local_config, dict):
             return {}
         if keys is None:
@@ -465,7 +515,8 @@ class AIoTStorage:
             if key in local_config}
 
     def gen_storage_path(
-            self, domain: Optional[str] = None,
+            self,
+            domain: Optional[str] = None,
             name_with_suffix: Optional[str] = None
     ) -> str:
         """生成文件路径."""

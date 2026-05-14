@@ -20,7 +20,12 @@ from .aiot_spec import (
     AIoTSpecValueList,
     AIoTSpecService
 )
-from .common import slugify_did, slugify_name, get_service_name, get_prop_name
+from .common import (
+    slugify_did,
+    slugify_name,
+    get_service_name,
+    get_prop_name
+)
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,7 +42,9 @@ class AIoTEntityData:
     actions: set[AIoTSpecAction]
 
     def __init__(
-            self, platform: str, spec: AIoTSpecInstance | AIoTSpecService
+            self,
+            platform: str,
+            spec: AIoTSpecInstance | AIoTSpecService
     ) -> None:
         self.platform = platform
         self.spec = spec
@@ -78,7 +85,12 @@ class AIoTDevice:
     _group_id: str
     _endpoint_name: str
 
-    def __init__(self, aiot_client: AIoTClient, device_info: dict[str, Any], spec_instance: AIoTSpecInstance) -> None:
+    def __init__(
+            self,
+            aiot_client: AIoTClient,
+            device_info: dict[str, Any],
+            spec_instance: AIoTSpecInstance
+    ) -> None:
         self.aiot_client = aiot_client
         self.spec_instance = spec_instance
         self._entity_map = {}
@@ -132,10 +144,24 @@ class AIoTDevice:
     def action_list(self) -> dict[str, list[AIoTSpecAction]]:
         return self._action_list
 
-    async def action_async(self, aam_cmd: str, aam_prop_name: str, in_list: list) -> list:
-        return await self.aiot_client.action_async(did=self._did, siid=siid, aiid=aiid, in_list=in_list)
+    async def action_async(
+            self,
+            snnd: str,
+            annd: str,
+            in_list: list
+    ) -> list:
+        return await self.aiot_client.action_async(
+            did=self._did,
+            snnd=snnd,
+            annd=annd,
+            in_list=in_list
+        )
 
-    def sub_device_state(self, key: str, handler: Callable[[str, AIoTDeviceState], None]) -> int:
+    def sub_device_state(
+            self,
+            key: str,
+            handler: Callable[[str, AIoTDeviceState], None]
+    ) -> int:
         """设备状态订阅"""
         sub_id = self.__gen_sub_id()
         if key in self._device_state_sub_list:
@@ -144,7 +170,11 @@ class AIoTDevice:
             self._device_state_sub_list[key] = {str(sub_id): handler}
         return sub_id
 
-    def unsub_device_state(self, key: str, sub_id: int) -> None:
+    def unsub_device_state(
+            self,
+            key: str,
+            sub_id: int
+    ) -> None:
         """设备状态取消订阅"""
         sub_list = self._device_state_sub_list.get(key, None)
         if sub_list:
@@ -152,41 +182,60 @@ class AIoTDevice:
         if not sub_list:
             self._device_state_sub_list.pop(key, None)
 
-    def sub_property(self, handler: Callable[[dict, Any], None], aam_cmd: str, aam_prop_name: str) -> int:
+    def sub_property(
+            self,
+            handler: Callable[[dict, Any], None],
+            snnd: str,
+            pnnd: str
+    ) -> int:
         """属性订阅"""
-        key: str = f'p.{aam_cmd}.{aam_prop_name}'
+        key: str = f'p.{snnd}.{pnnd}'
 
         def _on_prop_changed(params: dict, ctx: Any) -> None:
-            for handler in self._value_sub_list[key].values():
-                handler(params, ctx)
+            for _handler in self._value_sub_list[key].values():
+                _handler(params, ctx)
 
         sub_id = self.__gen_sub_id()
         if key in self._value_sub_list:
             self._value_sub_list[key][str(sub_id)] = handler
         else:
             self._value_sub_list[key] = {str(sub_id): handler}
-            self.aiot_client.sub_prop(did=self._did, handler=_on_prop_changed, aam_cmd=aam_cmd,
-                                      aam_prop_name=aam_prop_name)
+            self.aiot_client.sub_prop(
+                did=self._did,
+                handler=_on_prop_changed,
+                snnd=snnd,
+                pnnd=pnnd
+            )
         return sub_id
 
-    def unsub_property(self, aam_cmd: str, aam_prop_name: str, sub_id: int) -> None:
+    def unsub_property(
+            self,
+            snnd: str,
+            pnnd: str,
+            sub_id: int
+    ) -> None:
         """属性取消订阅"""
-        key: str = f'p.{aam_cmd}.{aam_prop_name}'
+        key: str = f'p.{snnd}.{pnnd}'
 
         sub_list = self._value_sub_list.get(key, None)
         if sub_list:
             sub_list.pop(str(sub_id), None)
         if not sub_list:
-            self.aiot_client.unsub_prop(did=self._did, aam_cmd=aam_cmd, aam_prop_name=aam_prop_name)
+            self.aiot_client.unsub_prop(did=self._did, snnd=snnd, pnnd=pnnd)
             self._value_sub_list.pop(key, None)
 
-    def sub_event(self, handler: Callable[[dict, Any], None], aam_cmd: str, aam_prop_name: str) -> int:
+    def sub_event(
+            self,
+            handler: Callable[[dict, Any], None],
+            snnd: str,
+            ennd: str
+    ) -> int:
         """事件订阅"""
-        key: str = f'e.{aam_cmd}.{aam_prop_name}'
+        key: str = f'e.{snnd}.{ennd}'
 
         def _on_event_occurred(params: dict, ctx: Any) -> None:
-            for handler in self._value_sub_list[key].values():
-                handler(params, ctx)
+            for _handler in self._value_sub_list[key].values():
+                _handler(params, ctx)
 
         sub_id = self.__gen_sub_id()
         if key in self._value_sub_list:
@@ -196,20 +245,25 @@ class AIoTDevice:
             self.aiot_client.sub_event(
                 did=self._did,
                 handler=_on_event_occurred,
-                aam_cmd=aam_cmd,
-                aam_prop_name=aam_prop_name
+                snnd=snnd,
+                ennd=ennd
             )
         return sub_id
 
-    def unsub_event(self, aam_cmd: str, aam_prop_name: str, sub_id: int) -> None:
+    def unsub_event(
+            self,
+            snnd: str,
+            ennd: str,
+            sub_id: int
+    ) -> None:
         """事件取消订阅"""
-        key: str = f'e.{aam_cmd}.{aam_prop_name}'
+        key: str = f'e.{snnd}.{ennd}'
 
         sub_list = self._value_sub_list.get(key, None)
         if sub_list:
             sub_list.pop(str(sub_id), None)
         if not sub_list:
-            self.aiot_client.unsub_event(did=self._did, aam_cmd=aam_cmd, aam_prop_name=aam_prop_name)
+            self.aiot_client.unsub_event(did=self._did, snnd=snnd, ennd=ennd)
             self._value_sub_list.pop(key, None)
 
     @property
@@ -256,30 +310,50 @@ class AIoTDevice:
         return slugify_did(lan_server=self.aiot_client.lan_server, did=self._did)
 
     def gen_device_entity_id(self, ha_domain: str) -> str:
-        return (
-            f'{ha_domain}.{self._model_strs[0][:9]}_{self.did_tag}_'
-            f'{self._model_strs[-1][:20]}'
-        )
+        return f'{ha_domain}.{self.did_tag}'
 
-    def gen_service_entity_id(self, ha_domain: str, siid: int,
-                              description: str) -> str:
-        return (
-            f'{ha_domain}.{self._model_strs[0][:9]}_{self.did_tag}_'
-            f'{self._model_strs[-1][:20]}_s_{siid}_{description}')
-
-    def gen_prop_entity_id(self, ha_domain: str, spec_name: str, mid_bind_id: str, endpoint: str) -> str:
-        return f'{ha_domain}.{slugify_name(spec_name)}_{mid_bind_id}_{endpoint}'
-
-    def gen_event_entity_id(
-            self, ha_domain: str, spec_name: str, siid: int, eiid: int
+    def gen_service_entity_id(
+            self,
+            ha_domain: str,
+            snnd: str,
+            description: str
     ) -> str:
         return (
-            f'{ha_domain}.{self._model_strs[0][:9]}_{self.did_tag}_'
-            f'{self._model_strs[-1][:20]}_{slugify_name(spec_name)}'
-            f'_e_{siid}_{eiid}')
+            f'{ha_domain}.{self.did_tag}_s_{snnd}_{description}'
+        )
 
-    def gen_action_entity_id(self, ha_domain: str, spec_name: str, mid_bind_id: str, endpoint: str) -> str:
-        return f'{ha_domain}.{slugify_name(spec_name)}_{mid_bind_id}_{endpoint}'
+    def gen_prop_entity_id(
+            self,
+            ha_domain: str,
+            spec_name: str,
+            snnd: str,
+            pnnd: str
+    ) -> str:
+        return (
+            f'{ha_domain}.{self.did_tag}_{slugify_name(spec_name)}_p_{snnd}_{pnnd}'
+        )
+
+    def gen_event_entity_id(
+            self,
+            ha_domain: str,
+            spec_name: str,
+            snnd: str,
+            ennd: str
+    ) -> str:
+        return (
+            f'{ha_domain}.{self.did_tag}_{slugify_name(spec_name)}_e_{snnd}_{ennd}'
+        )
+
+    def gen_action_entity_id(
+            self,
+            ha_domain: str,
+            spec_name: str,
+            snnd: str,
+            annd: str
+    ) -> str:
+        return (
+            f'{ha_domain}.{self.did_tag}_{slugify_name(spec_name)}_a_{snnd}_{annd}'
+        )
 
     @property
     def name(self) -> str:
@@ -326,17 +400,18 @@ class AIoTDevice:
         return self._sub_id
 
     def __on_device_state_changed(
-            self, did: str, state: AIoTDeviceState, ctx: Any
+            self,
+            did: str,
+            state: AIoTDeviceState, ctx: Any
     ) -> None:
         self._online = state == AIoTDeviceState.ONLINE
         for key, sub_list in self._device_state_sub_list.items():
             for handler in sub_list.values():
-                self.aiot_client.main_loop.call_soon_threadsafe(
-                    handler, key, state)
+                self.aiot_client.main_loop.call_soon_threadsafe(handler, key, state)
 
 
 class AIoTServiceEntity(Entity):
-    """AIoT Service Entity."""
+    """AIoT 服务实体"""
     # pylint: disable=unused-argument
     # pylint: disable=inconsistent-quotes
     aiot_device: AIoTDevice
@@ -347,15 +422,15 @@ class AIoTServiceEntity(Entity):
     _state_sub_id: int
     _value_sub_ids: dict[str, int]
 
-    _event_occurred_handler: Optional[
-        Callable[[AIoTSpecEvent, dict], None]]
-    _prop_changed_subs: dict[
-        AIoTSpecProperty, Callable[[AIoTSpecProperty, Any], None]]
+    _event_occurred_handler: Optional[Callable[[AIoTSpecEvent, dict], None]]
+    _prop_changed_subs: dict[AIoTSpecProperty, Callable[[AIoTSpecProperty, Any], None]]
 
     _pending_write_ha_state_timer: Optional[asyncio.TimerHandle]
 
     def __init__(
-            self, aiot_device: AIoTDevice, entity_data: AIoTEntityData
+            self,
+            aiot_device: AIoTDevice,
+            entity_data: AIoTEntityData
     ) -> None:
         if (
                 aiot_device is None
@@ -376,7 +451,7 @@ class AIoTServiceEntity(Entity):
         elif isinstance(self.entity_data.spec, AIoTSpecService):
             self.entity_id = aiot_device.gen_service_entity_id(
                 DOMAIN,
-                siid=self.entity_data.spec.iid,
+                snnd=self.entity_data.spec.nnd,
                 description=self.entity_data.spec.description
             )
             self._attr_name = (
@@ -422,29 +497,29 @@ class AIoTServiceEntity(Entity):
     async def async_added_to_hass(self) -> None:
         state_id = 's.0'
         if isinstance(self.entity_data.spec, AIoTSpecService):
-            state_id = f's.{self.entity_data.spec.iid}'
+            state_id = f's.{self.entity_data.spec.nnd}'
         self._state_sub_id = self.aiot_device.sub_device_state(
             key=state_id,
             handler=self.__on_device_state_changed
         )
-        # Sub prop
+        # 订阅属性
         for prop in self.entity_data.props:
-            key = f'p.{prop.service.iid}.{prop.iid}'
+            key = f'p.{prop.service.nnd}.{prop.nnd}'
             self._value_sub_ids[key] = self.aiot_device.sub_property(
                 handler=self.__on_properties_changed,
-                siid=prop.service.iid,
-                piid=prop.iid
+                snnd=prop.service.nnd,
+                pnnd=prop.nnd
             )
-        # Sub event
+        # 订阅事件
         for event in self.entity_data.events:
-            key = f'e.{event.service.iid}.{event.iid}'
+            key = f'e.{event.service.nnd}.{event.nnd}'
             self._value_sub_ids[key] = self.aiot_device.sub_event(
                 handler=self.__on_event_occurred,
-                siid=event.service.iid,
-                eiid=event.iid
+                snnd=event.service.nnd,
+                ennd=event.nnd
             )
 
-        # Refresh value
+        # 刷新值
         if self._attr_available:
             self.__refresh_props_value()
 
@@ -454,32 +529,32 @@ class AIoTServiceEntity(Entity):
             self._pending_write_ha_state_timer = None
         state_id = 's.0'
         if isinstance(self.entity_data.spec, AIoTSpecService):
-            state_id = f's.{self.entity_data.spec.iid}'
+            state_id = f's.{self.entity_data.spec.nnd}'
         self.aiot_device.unsub_device_state(key=state_id, sub_id=self._state_sub_id)
-        # Unsub prop
+        # 取消订阅属性
         for prop in self.entity_data.props:
-            if not prop.notifiable and not prop.readable:
-                continue
-            sub_id = self._value_sub_ids.pop(f'p.{prop.service.iid}.{prop.iid}', None)
+            sub_id = self._value_sub_ids.pop(f'p.{prop.service.nnd}.{prop.nnd}', None)
             if sub_id:
-                self.aiot_device.unsub_property(siid=prop.service.iid, piid=prop.iid, sub_id=sub_id)
-        # Unsub event
+                self.aiot_device.unsub_property(snnd=prop.service.nnd, pnnd=prop.nnd, sub_id=sub_id)
+        # 取消订阅事件
         for event in self.entity_data.events:
-            sub_id = self._value_sub_ids.pop(
-                f'e.{event.service.iid}.{event.iid}', None)
+            sub_id = self._value_sub_ids.pop(f'e.{event.service.nnd}.{event.nnd}', None)
             if sub_id:
-                self.aiot_device.unsub_event(
-                    siid=event.service.iid, eiid=event.iid, sub_id=sub_id)
+                self.aiot_device.unsub_event(snnd=event.service.nnd, ennd=event.nnd, sub_id=sub_id)
 
     def get_map_value(
-            self, map_: Optional[dict[int, Any]], key: int
+            self,
+            map_: Optional[dict[int, Any]],
+            key: int
     ) -> Any:
         if map_ is None:
             return None
         return map_.get(key, None)
 
     def get_map_key(
-            self, map_: Optional[dict[int, Any]], value: Any
+            self,
+            map_: Optional[dict[int, Any]],
+            value: Any
     ) -> Optional[int]:
         if map_ is None:
             return None
@@ -490,43 +565,42 @@ class AIoTServiceEntity(Entity):
 
     def get_prop_value(self, prop: Optional[AIoTSpecProperty]) -> Any:
         if not prop:
-            _LOGGER.error(
-                'get_prop_value error, property is None, %s, %s',
-                self._attr_name, self.entity_id)
+            _LOGGER.error('get_prop_value error, property is None, %s, %s', self._attr_name, self.entity_id)
             return None
         return self._prop_value_map.get(prop, None)
 
     def set_prop_value(
-            self, prop: Optional[AIoTSpecProperty], value: Any
+            self,
+            prop: Optional[AIoTSpecProperty],
+            value: Any
     ) -> None:
         if not prop:
-            _LOGGER.error(
-                'set_prop_value error, property is None, %s, %s',
-                self._attr_name, self.entity_id)
+            _LOGGER.error('set_prop_value error, property is None, %s, %s', self._attr_name, self.entity_id)
             return
         self._prop_value_map[prop] = value
 
     async def set_property_async(
-            self, prop: Optional[AIoTSpecProperty], value: Any,
+            self,
+            prop: Optional[AIoTSpecProperty],
+            value: Any,
             update_value: bool = True, write_ha_state: bool = True
     ) -> bool:
         if not prop:
-            raise RuntimeError(
-                f'set property failed, property is None, '
-                f'{self.entity_id}, {self.name}')
+            raise RuntimeError(f'set property failed, property is None, 'f'{self.entity_id}, {self.name}')
         value = prop.value_format(value)
         value = prop.value_precision(value)
         if prop not in self.entity_data.props:
-            raise RuntimeError(
-                f'set property failed, unknown property, '
-                f'{self.entity_id}, {self.name}, {prop.name}')
+            raise RuntimeError(f'set property failed, unknown property, 'f'{self.entity_id}, {self.name}, {prop.name}')
         try:
+            json_data = self.__gen_json_data(value)
             await self.aiot_device.aiot_client.set_prop_async(
-                did=self.aiot_device.did, siid=prop.service.iid,
-                piid=prop.iid, value=value)
+                did=self.aiot_device.did,
+                snnd=prop.service.nnd,
+                group_id=self.iot_device.group_id,
+                json_data=json_data
+            )
         except AIoTClientError as e:
-            raise RuntimeError(
-                f'{e}, {self.entity_id}, {self.name}, {prop.name}') from e
+            raise RuntimeError(f'{e}, {self.entity_id}, {self.name}, {prop.name}') from e
         if update_value:
             self._prop_value_map[prop] = value
         if write_ha_state:
@@ -546,7 +620,11 @@ class AIoTServiceEntity(Entity):
             return None
         value: Any = prop.value_format(
             await self.aiot_device.aiot_client.get_prop_async(
-                did=self.aiot_device.did, siid=prop.service.iid, piid=prop.iid))
+                did=self.aiot_device.did,
+                snnd=prop.service.nnd,
+                pnnd=prop.nnd
+            )
+        )
         value = prop.eval_expr(value)
         result = prop.value_precision(value)
         if result != self._prop_value_map[prop]:
@@ -555,26 +633,33 @@ class AIoTServiceEntity(Entity):
         return result
 
     async def action_async(
-            self, action: AIoTSpecAction, in_list: Optional[list] = None
+            self,
+            action: AIoTSpecAction,
+            in_list: Optional[list] = None
     ) -> bool:
         if not action:
-            raise RuntimeError(
-                f'action failed, action is None, {self.entity_id}, {self.name}')
+            raise RuntimeError(f'action failed, action is None, {self.entity_id}, {self.name}')
         try:
             await self.aiot_device.aiot_client.action_async(
-                did=self.aiot_device.did, siid=action.service.iid,
-                aiid=action.iid, in_list=in_list or [])
+                did=self.aiot_device.did,
+                snnd=action.service.nnd,
+                annd=action.nnd,
+                in_list=in_list or []
+            )
         except AIoTClientError as e:
-            raise RuntimeError(
-                f'{e}, {self.entity_id}, {self.name}, {action.name}') from e
+            raise RuntimeError(f'{e}, {self.entity_id}, {self.name}, {action.name}') from e
         return True
 
-    def __on_properties_changed(self, params: dict, ctx: Any) -> None:
+    def __on_properties_changed(
+            self,
+            params: dict,
+            ctx: Any
+    ) -> None:
         _LOGGER.debug('properties changed, %s', params)
         for prop in self.entity_data.props:
             if (
-                    prop.iid != params['piid']
-                    or prop.service.iid != params['siid']
+                    prop.nnd != params['pnnd']
+                    or prop.service.nnd != params['snnd']
             ):
                 continue
             value: Any = prop.value_format(params['value'])
@@ -587,27 +672,33 @@ class AIoTServiceEntity(Entity):
         if not self._pending_write_ha_state_timer:
             self.async_write_ha_state()
 
-    def __on_event_occurred(self, params: dict, ctx: Any) -> None:
+    def __on_event_occurred(
+            self,
+            params: dict,
+            ctx: Any
+    ) -> None:
         _LOGGER.debug('event occurred, %s', params)
         if self._event_occurred_handler is None:
             return
         for event in self.entity_data.events:
             if (
-                    event.iid != params['eiid']
-                    or event.service.iid != params['siid']
+                    event.nnd != params['ennd']
+                    or event.service.nnd != params['snnd']
             ):
                 continue
             trans_arg = {}
             for item in params['arguments']:
                 for prop in event.argument:
-                    if prop.iid == item['piid']:
+                    if prop.nnd == item['pnnd']:
                         trans_arg[prop.description_trans] = item['value']
                         break
             self._event_occurred_handler(event, trans_arg)
             break
 
     def __on_device_state_changed(
-            self, key: str, state: AIoTDeviceState
+            self,
+            key: str,
+            state: AIoTDeviceState
     ) -> None:
         state_new = state == AIoTDeviceState.ONLINE
         if state_new == self._attr_available:
@@ -621,11 +712,13 @@ class AIoTServiceEntity(Entity):
     def __refresh_props_value(self) -> None:
         for prop in self.entity_data.props:
             self.aiot_device.aiot_client.request_refresh_prop(
-                did=self.aiot_device.did, siid=prop.service.iid, piid=prop.iid)
+                did=self.aiot_device.did,
+                snnd=prop.service.nnd,
+                pnnd=prop.nnd
+            )
         if self._pending_write_ha_state_timer:
             self._pending_write_ha_state_timer.cancel()
-        self._pending_write_ha_state_timer = self._main_loop.call_later(
-            1, self.__write_ha_state_handler)
+        self._pending_write_ha_state_timer = self._main_loop.call_later(1, self.__write_ha_state_handler)
 
     def __write_ha_state_handler(self) -> None:
         self._pending_write_ha_state_timer = None
@@ -679,9 +772,9 @@ class AIoTPropertyEntity(Entity):
         self._attr_available = aiot_device.online  # 实体当前是否可用
 
         _LOGGER.info(
-            'new aiot property entity, %s, %s, %s, %s, %s',
-            self.aiot_device.name, self._attr_name, spec.platform,
-            spec.device_class, self.entity_id)
+            'new aiot property entity, %s, %s, %s, %s',
+            self.aiot_device.name, self._attr_name, spec.platform, self.entity_id
+        )
 
         # 解析属性设置命令和参数
         self._aam_cmd = get_service_name(spec.service.type_)
@@ -692,15 +785,18 @@ class AIoTPropertyEntity(Entity):
         return self.aiot_device.device_info
 
     async def async_added_to_hass(self) -> None:
-        # Sub device state changed
+        # 订阅设备状态变更
         self._state_sub_id = self.aiot_device.sub_device_state(
-            key=f'{self.service.iid}.{self.spec.iid}',
-            handler=self.__on_device_state_changed)
-        # Sub value changed
+            key=f'{self.service.nnd}.{self.spec.nnd}',
+            handler=self.__on_device_state_changed
+        )
+        # 订阅属性值变更
         self._value_sub_id = self.aiot_device.sub_property(
             handler=self.__on_value_changed,
-            siid=self.service.iid, piid=self.spec.iid)
-        # Refresh value
+            snnd=self.service.nnd,
+            pnnd=self.spec.nnd
+        )
+        # 刷新值
         if self._attr_available:
             self.__request_refresh_prop()
 
@@ -709,11 +805,14 @@ class AIoTPropertyEntity(Entity):
             self._pending_write_ha_state_timer.cancel()
             self._pending_write_ha_state_timer = None
         self.aiot_device.unsub_device_state(
-            key=f'{self.service.iid}.{self.spec.iid}',
-            sub_id=self._state_sub_id)
+            key=f'{self.service.nnd}.{self.spec.nnd}',
+            sub_id=self._state_sub_id
+        )
         self.aiot_device.unsub_property(
-            siid=self.service.iid, piid=self.spec.iid,
-            sub_id=self._value_sub_id)
+            snnd=self.service.nnd,
+            pnnd=self.spec.nnd,
+            sub_id=self._value_sub_id
+        )
 
     def get_vlist_description(self, value: Any) -> Optional[str]:
         # 根据值获取描述
@@ -729,23 +828,10 @@ class AIoTPropertyEntity(Entity):
 
     async def set_property_async(self, value: any) -> bool:
         try:
-            json_data = {self._param_key: value}
-
-            # 如果属性有group_key，需要收集同一组的其他属性一起发送
-            if self.spec.group_key:
-                for prop in self.iot_device.prop_list.get('number', []):
-                    if prop.group_key == self.spec.group_key and prop.name != self.spec.name:
-                        # 获取同一组其他属性的当前值
-                        prop_value = self.iot_device.get_entity_map_value(self._cmd, prop.name)
-                        if prop_value is not None:
-                            json_data[prop.name] = prop_value
-                        else:
-                            # 如果其他属性没有当前值，使用默认值
-                            json_data[prop.name] = self.spec.get_default_value()
-
+            json_data = self.__gen_json_data(value)
             await self.aiot_device.aiot_client.set_prop_async(
                 did=self.aiot_device.did,
-                aam_cmd=self._aam_cmd,
+                snnd=self.service.nnd,
                 group_id=self.iot_device.group_id,
                 json_data=json_data,
             )
@@ -761,8 +847,10 @@ class AIoTPropertyEntity(Entity):
         value: Any = self.spec.value_format(
             await self.aiot_device.aiot_client.get_prop_async(
                 did=self.aiot_device.did,
-                siid=self.spec.service.iid,
-                piid=self.spec.iid))
+                snnd=self.spec.service.nnd,
+                pnnd=self.spec.nnd
+            )
+        )
         value = self.spec.eval_expr(value)
         result = self.spec.value_precision(value)
         return result
@@ -786,8 +874,8 @@ class AIoTPropertyEntity(Entity):
     def __request_refresh_prop(self) -> None:
         self.aiot_device.aiot_client.request_refresh_prop(
             did=self.aiot_device.did,
-            siid=self.service.iid,
-            piid=self.spec.iid
+            snnd=self.service.nnd,
+            pnnd=self.spec.nnd
         )
         if self._pending_write_ha_state_timer:
             self._pending_write_ha_state_timer.cancel()
@@ -796,6 +884,22 @@ class AIoTPropertyEntity(Entity):
     def __write_ha_state_handler(self) -> None:
         self._pending_write_ha_state_timer = None
         self.async_write_ha_state()
+
+    def __gen_json_data(self, value: Any) -> dict:
+        json_data = {self._param_key: value}
+
+        # 如果属性有group_key，需要收集同一组的其他属性一起发送
+        if self.spec.group_key:
+            for prop in self.iot_device.prop_list.get('number', []):
+                if prop.group_key == self.spec.group_key and prop.name != self.spec.name:
+                    # 获取同一组其他属性的当前值
+                    prop_value = self.iot_device.get_entity_map_value(self._cmd, prop.name)
+                    if prop_value is not None:
+                        json_data[prop.name] = prop_value
+                    else:
+                        # 如果其他属性没有当前值，使用默认值
+                        json_data[prop.name] = self.spec.get_default_value()
+        return json_data
 
 
 class AIoTEventEntity(Entity):
@@ -812,37 +916,45 @@ class AIoTEventEntity(Entity):
     _state_sub_id: int
     _value_sub_id: int
 
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecEvent) -> None:
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecEvent
+    ) -> None:
         if aiot_device is None or spec is None or spec.service is None:
             raise AIoTDeviceError('init error, invalid params')
         self.aiot_device = aiot_device
         self.spec = spec
         self.service = spec.service
         self._main_loop = aiot_device.aiot_client.main_loop
-        # Gen entity_id
+        # 生成实体id
         self.entity_id = self.aiot_device.gen_event_entity_id(
-            ha_domain=DOMAIN, spec_name=spec.name,
-            siid=spec.service.iid, eiid=spec.iid)
-        # Set entity attr
+            ha_domain=DOMAIN,
+            spec_name=spec.name,
+            snnd=spec.service.nnd,
+            ennd=spec.nnd
+        )
+        # 设置实体属性
         self._attr_unique_id = self.entity_id
         self._attr_should_poll = False
         self._attr_has_entity_name = True
         self._attr_name = (
             f'{"* " if self.spec.proprietary else " "}'
-            f'{self.service.description_trans} {spec.description_trans}')
+            f'{self.service.description_trans} {spec.description_trans}'
+        )
         self._attr_available = aiot_device.online
         self._attr_event_types = [spec.description_trans]
 
         self._arguments_map = {}
         for prop in spec.argument:
-            self._arguments_map[prop.iid] = prop.description_trans
+            self._arguments_map[prop.nnd] = prop.description_trans
         self._state_sub_id = 0
         self._value_sub_id = 0
 
         _LOGGER.info(
-            'new aiot event entity, %s, %s, %s, %s, %s',
-            self.aiot_device.name, self._attr_name, spec.platform,
-            spec.device_class, self.entity_id)
+            'new aiot event entity, %s, %s, %s, %s',
+            self.aiot_device.name, self._attr_name, spec.platform, self.entity_id
+        )
 
     @property
     def device_info(self) -> Optional[DeviceInfo]:
@@ -850,23 +962,31 @@ class AIoTEventEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         self._state_sub_id = self.aiot_device.sub_device_state(
-            key=f'event.{self.service.iid}.{self.spec.iid}',
-            handler=self.__on_device_state_changed)
+            key=f'event.{self.service.nnd}.{self.spec.nnd}',
+            handler=self.__on_device_state_changed
+        )
         self._value_sub_id = self.aiot_device.sub_event(
             handler=self.__on_event_occurred,
-            siid=self.service.iid, eiid=self.spec.iid)
+            snnd=self.service.nnd,
+            ennd=self.spec.nnd
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         self.aiot_device.unsub_device_state(
-            key=f'event.{self.service.iid}.{self.spec.iid}',
-            sub_id=self._state_sub_id)
+            key=f'event.{self.service.nnd}.{self.spec.nnd}',
+            sub_id=self._state_sub_id
+        )
         self.aiot_device.unsub_event(
-            siid=self.service.iid, eiid=self.spec.iid,
-            sub_id=self._value_sub_id)
+            snnd=self.service.nnd,
+            ennd=self.spec.nnd,
+            sub_id=self._value_sub_id
+        )
 
     @abstractmethod
     def on_event_occurred(
-            self, name: str, arguments: dict[str, Any] | None = None
+            self,
+            name: str,
+            arguments: dict[str, Any] | None = None
     ) -> None:
         ...
 
@@ -877,9 +997,8 @@ class AIoTEventEntity(Entity):
             try:
                 if 'value' not in item:
                     continue
-                if 'piid' in item:
-                    trans_arg[self._arguments_map[item['piid']]] = item[
-                        'value']
+                if 'pnnd' in item:
+                    trans_arg[self._arguments_map[item['piid']]] = item['value']
                 elif (
                         isinstance(item['value'], list)
                         and len(item['value']) == len(self.spec.argument)
@@ -891,15 +1010,15 @@ class AIoTEventEntity(Entity):
                     }
                     break
             except KeyError as error:
-                _LOGGER.debug(
-                    'on event msg, invalid args, %s, %s, %s',
-                    self.entity_id, params, error)
+                _LOGGER.debug('on event msg, invalid args, %s, %s, %s', self.entity_id, params, error)
         self.on_event_occurred(
             name=self.spec.description_trans, arguments=trans_arg)
         self.async_write_ha_state()
 
     def __on_device_state_changed(
-            self, key: str, state: AIoTDeviceState
+            self,
+            key: str,
+            state: AIoTDeviceState
     ) -> None:
         state_new = state == AIoTDeviceState.ONLINE
         if state_new == self._attr_available:
@@ -919,7 +1038,11 @@ class AIoTActionEntity(Entity):
     _out_map: dict[int, AIoTSpecProperty]
     _state_sub_id: int
 
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecAction) -> None:
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecAction
+    ) -> None:
         if aiot_device is None or spec is None:
             raise AIoTDeviceError('init error, invalid params')
         self.aiot_device = aiot_device
@@ -927,11 +1050,11 @@ class AIoTActionEntity(Entity):
         self._main_loop = aiot_device.aiot_client.main_loop
         self._state_sub_id = 0
         # Gen entity_id
-        self.entity_id = self.iot_device.gen_action_entity_id(
+        self.entity_id = self.aiot_device.gen_action_entity_id(
             ha_domain=DOMAIN,
             spec_name=spec.name,
-            mid_bind_id=aiot_device.mid_bind_id,
-            endpoint=aiot_device.endpoint
+            snnd=spec.service.nnd,
+            annd=spec.nnd
         )
         # Set entity attr
         self._attr_unique_id = self.entity_id
@@ -940,8 +1063,8 @@ class AIoTActionEntity(Entity):
         self._attr_name = f'{aiot_device.endpoint_name}  {spec.description}'  # 实体名
         self._attr_available = aiot_device.online
         _LOGGER.debug(
-            'new aiot action entity, %s, %s, %s, %s, %s',
-            self.aiot_device.name, self._attr_name, spec.platform, spec.device_class, self.entity_id
+            'new aiot action entity, %s, %s, %s,  %s',
+            self.aiot_device.name, self._attr_name, spec.platform, self.entity_id
         )
 
     @property
@@ -950,28 +1073,31 @@ class AIoTActionEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         self._state_sub_id = self.aiot_device.sub_device_state(
-            key=f'a.{self.service.iid}.{self.spec.iid}',
-            handler=self.__on_device_state_changed)
+            key=f'a.{self.service.nnd}.{self.spec.nnd}',
+            handler=self.__on_device_state_changed
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         self.aiot_device.unsub_device_state(
-            key=f'a.{self.service.iid}.{self.spec.iid}',
-            sub_id=self._state_sub_id)
+            key=f'a.{self.service.nnd}.{self.spec.nnd}',
+            sub_id=self._state_sub_id
+        )
 
-    async def action_async(
-            self, in_list: Optional[list] = None
-    ) -> Optional[list]:
+    async def action_async(self, in_list: Optional[list] = None) -> Optional[list]:
         try:
             return await self.aiot_device.aiot_client.action_async(
                 did=self.aiot_device.did,
-                siid=self.service.iid,
-                aiid=self.spec.iid,
-                in_list=in_list or [])
+                snnd=self.service.nnd,
+                annd=self.spec.nnd,
+                in_list=in_list or []
+            )
         except AIoTClientError as e:
             raise RuntimeError(f'{e}, {self.entity_id}, {self.name}') from e
 
     def __on_device_state_changed(
-            self, key: str, state: AIoTDeviceState
+            self,
+            key: str,
+            state: AIoTDeviceState
     ) -> None:
         state_new = state == AIoTDeviceState.ONLINE
         if state_new == self._attr_available:

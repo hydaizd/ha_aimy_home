@@ -12,11 +12,13 @@ from zeroconf import (
     DNSQuestionType,
     IPVersion,
     ServiceStateChange,
-    Zeroconf)
+    Zeroconf
+)
 from zeroconf.asyncio import (
     AsyncServiceInfo,
     AsyncZeroconf,
-    AsyncServiceBrowser)
+    AsyncServiceBrowser
+)
 
 # pylint: disable=relative-beyond-top-level
 from .aiot_error import MipsServiceError
@@ -108,7 +110,8 @@ class MipsService:
         str, MipsServiceState, dict], Coroutine]]
 
     def __init__(
-            self, aiozc: AsyncZeroconf,
+            self,
+            aiozc: AsyncZeroconf,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> None:
         self._aiozc = aiozc
@@ -160,7 +163,9 @@ class MipsService:
         return copy.deepcopy(self._services)
 
     def sub_service_change(
-            self, key: str, group_id: str,
+            self,
+            key: str,
+            group_id: str,
             handler: Callable[[str, MipsServiceState, dict], Coroutine]
     ) -> None:
         if key is None or group_id is None or handler is None:
@@ -220,7 +225,11 @@ class MipsService:
         except MipsServiceError as error:
             _LOGGER.error('invalid mips service, %s, %s', error, info)
 
-    def __call_service_change(self, state: MipsServiceState, data: dict) -> None:
+    def __call_service_change(
+            self,
+            state: MipsServiceState,
+            data: dict
+    ) -> None:
         _LOGGER.info('call service change, %s, %s', state, data)
         for keys in list(self._sub_list.keys()):
             if keys[1] in [data.get('group_id', None), '*']:

@@ -61,8 +61,7 @@ class AIoTNetwork:
     _network_info: dict[str, NetworkInfo]
 
     _sub_list_network_status: dict[str, Callable[[bool], Coroutine]]
-    _sub_list_network_info: dict[str, Callable[[
-        InterfaceStatus, NetworkInfo], Coroutine]]
+    _sub_list_network_info: dict[str, Callable[[InterfaceStatus, NetworkInfo], Coroutine]]
     _done_event: asyncio.Event
 
     def __init__(
@@ -74,11 +73,9 @@ class AIoTNetwork:
     ) -> None:
         self._main_loop = loop or asyncio.get_running_loop()
         self._ip_addr_map = {
-            ip: self._DETECT_TIMEOUT for ip in
-            ip_addr_list or self._IP_ADDRESS_LIST}
+            ip: self._DETECT_TIMEOUT for ip in ip_addr_list or self._IP_ADDRESS_LIST}
         self._http_addr_map = {
-            url: self._DETECT_TIMEOUT for url in
-            url_addr_list or self._URL_ADDRESS_LIST}
+            url: self._DETECT_TIMEOUT for url in url_addr_list or self._URL_ADDRESS_LIST}
         self._http_session = aiohttp.ClientSession()
         self._refresh_interval = refresh_interval or self._REFRESH_INTERVAL
 
@@ -142,7 +139,9 @@ class AIoTNetwork:
         self._http_addr_map = new_url_map
 
     def sub_network_status(
-            self, key: str, handler: Callable[[bool], Coroutine]
+            self,
+            key: str,
+            handler: Callable[[bool], Coroutine]
     ) -> None:
         self._sub_list_network_status[key] = handler
 
@@ -150,7 +149,8 @@ class AIoTNetwork:
         self._sub_list_network_status.pop(key, None)
 
     def sub_network_info(
-            self, key: str,
+            self,
+            key: str,
             handler: Callable[[InterfaceStatus, NetworkInfo], Coroutine]
     ) -> None:
         self._sub_list_network_info[key] = handler
@@ -194,12 +194,9 @@ class AIoTNetwork:
         return False
 
     async def get_network_info_async(self) -> dict[str, NetworkInfo]:
-        return await self._main_loop.run_in_executor(
-            None, self.__get_network_info)
+        return await self._main_loop.run_in_executor(None, self.__get_network_info)
 
-    async def ping_multi_async(
-            self, ip_list: Optional[list[str]] = None
-    ) -> bool:
+    async def ping_multi_async(self, ip_list: Optional[list[str]] = None) -> bool:
         addr_list = ip_list or list(self._ip_addr_map.keys())
         tasks = []
         for addr in addr_list:
@@ -210,9 +207,7 @@ class AIoTNetwork:
                 self._ip_addr_map[addr] = ts
         return any([ts < self._DETECT_TIMEOUT for ts in results])
 
-    async def http_multi_async(
-            self, url_list: Optional[list[str]] = None
-    ) -> bool:
+    async def http_multi_async(self, url_list: Optional[list[str]] = None) -> bool:
         addr_list = url_list or list(self._http_addr_map.keys())
         tasks = []
         for addr in addr_list:
@@ -223,9 +218,12 @@ class AIoTNetwork:
                 self._http_addr_map[addr] = ts
         return any([ts < self._DETECT_TIMEOUT for ts in results])
 
-    def __calc_network_address(self, ip: str, netmask: str) -> str:
-        return str(ipaddress.IPv4Network(
-            f'{ip}/{netmask}', strict=False).network_address)
+    def __calc_network_address(
+            self,
+            ip: str,
+            netmask: str
+    ) -> str:
+        return str(ipaddress.IPv4Network(f'{ip}/{netmask}', strict=False).network_address)
 
     async def __ping_async(self, address: Optional[str] = None) -> float:
         start_ts: float = self._main_loop.time()
@@ -253,8 +251,7 @@ class AIoTNetwork:
     async def __http_async(self, url: str) -> float:
         start_ts: float = self._main_loop.time()
         try:
-            async with self._http_session.get(
-                    url, timeout=self._DETECT_TIMEOUT):
+            async with self._http_session.get(url, timeout=self._DETECT_TIMEOUT):
                 return self._main_loop.time() - start_ts
         except Exception:  # pylint: disable=broad-exception-caught
             pass
@@ -286,7 +283,9 @@ class AIoTNetwork:
         return results
 
     def __call_network_info_change(
-            self, status: InterfaceStatus, info: NetworkInfo
+            self,
+            status: InterfaceStatus,
+            info: NetworkInfo
     ) -> None:
         for handler in self._sub_list_network_info.values():
             self._main_loop.create_task(handler(status, info))

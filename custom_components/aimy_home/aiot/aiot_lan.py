@@ -15,6 +15,7 @@ from .common import gen_device_urn, gen_device_did
 from .const import (
     UNSUPPORTED_MODELS,
     HTTP_API_TIMEOUT,
+    HTTP_API_PORT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,8 +31,11 @@ class AIoTAuthClient:
     _state: str
 
     def __init__(
-            self, client_id: str, lan_server: str,
-            uuid: str, loop: Optional[asyncio.AbstractEventLoop] = None
+            self,
+            client_id: str,
+            lan_server: str,
+            uuid: str,
+            loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> None:
         self._main_loop = loop or asyncio.get_running_loop()
         if client_id is None or client_id.strip() == '':
@@ -42,10 +46,9 @@ class AIoTAuthClient:
             raise AIoTAuthError('invalid uuid')
 
         self._client_id = int(client_id)
-        self._auth_host = f'{lan_server}:10088'
+        self._auth_host = f'{lan_server}:{HTTP_API_PORT}'
         self._device_id = f'ha.{uuid}'
-        self._state = hashlib.sha1(
-            f'd={self._device_id}'.encode('utf-8')).hexdigest()
+        self._state = hashlib.sha1(f'd={self._device_id}'.encode('utf-8')).hexdigest()
         self._session = aiohttp.ClientSession(loop=self._main_loop)
 
     @property
@@ -84,8 +87,10 @@ class AIoTAuthClient:
         ):
             raise AIoTAuthError(f'invalid http response, {res_str}')
 
+        token = res_obj.get("data")
         return {
-            'access_token': res_obj.get("data"),
+            'access_token': token,
+            'refresh_token': token,
             'expires_ts': int(time.time() + 8 * 3600 * 0.7)
         }
 
@@ -130,7 +135,10 @@ class AIoTHttpClient:
     _get_prop_list: dict[str, dict]
 
     def __init__(
-            self, lan_server: str, client_id: str, access_token: str,
+            self,
+            lan_server: str,
+            client_id: str,
+            access_token: str,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> None:
         self._main_loop = loop or asyncio.get_running_loop()
@@ -150,8 +158,10 @@ class AIoTHttpClient:
             raise AIoTHttpError('invalid params')
 
         self.update_http_header(
-            lan_server=lan_server, client_id=client_id,
-            access_token=access_token)
+            lan_server=lan_server,
+            client_id=client_id,
+            access_token=access_token
+        )
 
         self._session = aiohttp.ClientSession(loop=self._main_loop)
 
@@ -168,7 +178,8 @@ class AIoTHttpClient:
             await self._session.close()
 
     def update_http_header(
-            self, lan_server: Optional[str] = None,
+            self,
+            lan_server: Optional[str] = None,
             client_id: Optional[str] = None,
             access_token: Optional[str] = None
     ) -> None:
@@ -190,60 +201,54 @@ class AIoTHttpClient:
         }
 
     # pylint: disable=unused-private-member
-    async def __myhome_api_get_async(
-            self, url_path: str, params: dict,
+    async def __aimy_home_api_get_async(
+            self,
+            url_path: str,
+            params: dict,
             timeout: int = HTTP_API_TIMEOUT
     ) -> dict:
         http_res = await self._session.get(
             url=f'{self._base_url}{url_path}',
             params=params,
             headers=self.__api_request_headers,
-            timeout=timeout)
+            timeout=timeout
+        )
         if http_res.status == 401:
             raise AIoTHttpError(
-                'myhome api get failed, unauthorized(401)',
-                AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN)
+                'aimy_home api get failed, unauthorized(401)', AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN
+            )
         if http_res.status != 200:
-            raise AIoTHttpError(
-                f'myhome api get failed, {http_res.status}, '
-                f'{url_path}, {params}')
+            raise AIoTHttpError(f'aimy_home api get failed, {http_res.status}, 'f'{url_path}, {params}')
         res_str = await http_res.text()
         res_obj: dict = json.loads(res_str)
         if not res_obj.get('success', None):
-            raise AIoTHttpError(
-                f'invalid response, {res_obj.get("success", None)}, '
-                f'{res_obj.get("msg", "")}')
-        _LOGGER.debug(
-            'mihome api get, %s%s, %s -> %s',
-            self._base_url, url_path, params, res_obj)
+            raise AIoTHttpError(f'invalid response, {res_obj.get("success", None)}, 'f'{res_obj.get("msg", "")}')
+        _LOGGER.debug('aimy_home api get, %s%s, %s -> %s', self._base_url, url_path, params, res_obj)
         return res_obj
 
-    async def __myhome_api_post_async(
-            self, url_path: str, data: dict,
+    async def __aimy_home_api_post_async(
+            self,
+            url_path: str,
+            data: dict,
             timeout: int = HTTP_API_TIMEOUT
     ) -> dict:
         http_res = await self._session.post(
             url=f'{self._base_url}{url_path}',
             json=data,
             headers=self.__api_request_headers,
-            timeout=timeout)
+            timeout=timeout
+        )
         if http_res.status == 401:
             raise AIoTHttpError(
-                'myhome api get failed, unauthorized(401)',
-                AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN)
+                'aimy_home api get failed, unauthorized(401)', AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN
+            )
         if http_res.status != 200:
-            raise AIoTHttpError(
-                f'myhome api post failed, {http_res.status}, '
-                f'{url_path}, {data}')
+            raise AIoTHttpError(f'aimy_home api post failed, {http_res.status}, 'f'{url_path}, {data}')
         res_str = await http_res.text()
         res_obj: dict = json.loads(res_str)
         if not res_obj.get('success', None):
-            raise AIoTHttpError(
-                f'invalid response, {res_obj.get("success", None)}, '
-                f'{res_obj.get("msg", "")}')
-        _LOGGER.debug(
-            'myhome api post, %s%s, %s -> %s',
-            self._base_url, url_path, data, res_obj)
+            raise AIoTHttpError(f'invalid response, {res_obj.get("success", None)}, 'f'{res_obj.get("msg", "")}')
+        _LOGGER.debug('aimy_home api post, %s%s, %s -> %s', self._base_url, url_path, data, res_obj)
         return res_obj
 
     async def get_user_info_async(self) -> dict:
@@ -279,7 +284,7 @@ class AIoTHttpClient:
             'midBindIds': mid_bind_ids,
         }
         device_infos: dict = {}
-        res_obj = await self.__myhome_api_post_async(
+        res_obj = await self.__aimy_home_api_post_async(
             url_path='/api/basic/device/endpoint_page',
             data=req_data
         )
@@ -317,8 +322,7 @@ class AIoTHttpClient:
         return device_infos
 
     async def get_devices_with_dids_async(self, dids: list[str]) -> Optional[dict[str, dict]]:
-        results: list[dict[str, dict]] = await asyncio.gather(
-            *[self.__get_device_list_page_async(dids=dids)])
+        results: list[dict[str, dict]] = await asyncio.gather(*[self.__get_device_list_page_async(dids=dids)])
         devices = {}
         for result in results:
             if result is None:
@@ -338,20 +342,20 @@ class AIoTHttpClient:
     async def get_props_async(self, params: list) -> list:
         """
         params = [
-            {"did": "xxxx", "aam_cmd": 2, "aam_prop_name": 1},
-            {"did": "xxxxxx", "aam_cmd": 2, "aam_prop_name": 2}
+            {"did": "xxxx", "snnd": 2, "pnnd": 1},
+            {"did": "xxxxxx", "snnd": 2, "pnnd": 2}
         ]
         """
         if len(params) == 1:
             # 单个请求
             param = params[0]
             did_strs: list[str] = param['did'].split('.')
-            res_obj = await self.__myhome_api_get_async(
+            res_obj = await self.__aimy_home_api_get_async(
                 url_path='/api/basic/device/props',
                 params={
                     'midBindId': did_strs[0],
                     'endpoint': did_strs[1],
-                    'aamPropNames': param['aam_prop_name']
+                    'aamPropNames': param['pnnd']
                 },
             )
             if 'data' not in res_obj:
@@ -367,7 +371,7 @@ class AIoTHttpClient:
 
             props_list = []
             for mid_bind_id in mid_bind_ids:
-                res_obj = await self.__myhome_api_get_async(
+                res_obj = await self.__aimy_home_api_get_async(
                     url_path='/api/basic/device/props',
                     params={
                         'midBindId': mid_bind_id,
@@ -378,14 +382,19 @@ class AIoTHttpClient:
                         for param in params:
                             if (
                                     param['did'] == f'{result['macAddr']}.{result['endPointPort']}'
-                                    and param['aam_prop_name'] == result['aamPropName']
+                                    and param['pnnd'] == result['aamPropName']
                             ):
                                 props_list.append(result)
             return props_list
 
-    async def __get_prop_async(self, did: str, aam_cmd: str, aam_prop_name: str) -> Any:
+    async def __get_prop_async(
+            self,
+            did: str,
+            snnd: str,
+            pnnd: str
+    ) -> Any:
         results = await self.get_props_async(
-            params=[{'did': did, 'aam_cmd': aam_cmd, 'aam_prop_name': aam_prop_name}]
+            params=[{'did': did, 'snnd': snnd, 'pnnd': pnnd}]
         )
         if not results:
             return None
@@ -444,19 +453,19 @@ class AIoTHttpClient:
     async def get_prop_async(
             self,
             did: str,
-            aam_cmd: str,
-            aam_prop_name: str,
+            snnd: str,
+            pnnd: str,
             immediately: bool = False
     ) -> Any:
         if immediately:
-            return await self.__get_prop_async(did=did, aam_cmd=aam_cmd, aam_prop_name=aam_prop_name)
-        key: str = f'{did}.{aam_cmd}.{aam_prop_name}'
+            return await self.__get_prop_async(did=did, snnd=snnd, pnnd=pnnd)
+        key: str = f'{did}.{snnd}.{pnnd}'
         prop_obj = self._get_prop_list.get(key, None)
         if prop_obj:
             return await prop_obj['fut']
         fut = self._main_loop.create_future()
         self._get_prop_list[key] = {
-            'param': {'did': did, 'aam_cmd': aam_cmd, 'aam_prop_name': aam_prop_name},
+            'param': {'did': did, 'snnd': snnd, 'pnnd': pnnd},
             'fut': fut
         }
         if self._get_prop_timer is None:
@@ -469,7 +478,7 @@ class AIoTHttpClient:
 
     async def set_prop_async(self, params: dict) -> dict:
         """控制设备."""
-        res_obj = await self.__myhome_api_post_async(
+        res_obj = await self.__aimy_home_api_post_async(
             url_path='/api/basic/device/ctrl',
             data=params,
             timeout=15
@@ -482,19 +491,19 @@ class AIoTHttpClient:
     async def action_async(
             self,
             did: str,
-            aam_cmd: str,
+            snnd: str,
+            annd: str,
             in_list: list[dict]
     ) -> dict:
         did_strs: list[str] = did.split('.')
 
         # 非标准动作参数
-        res_obj = await self.__myhome_api_post_async(
+        res_obj = await self.__aimy_home_api_post_async(
             url_path='/api/basic/device/ctrl',
             data={
-                "cmd": aam_cmd,
+                "cmd": snnd,
                 "midBindId": did_strs[0],
                 "endpointId": did_strs[1],
-
             },
             timeout=15
         )
@@ -510,7 +519,7 @@ class AIoTHttpClient:
             "productKey": product_key,
             "skuId": sku_id,
         }
-        res_obj = await self.__myhome_api_get_async(
+        res_obj = await self.__aimy_home_api_get_async(
             url_path='/api/basic/iot-spec-v1/instance',
             params=req_params
         )

@@ -2,7 +2,6 @@
 import asyncio
 import logging
 import platform
-import time
 from typing import Any, Union, Optional
 
 from slugify import slugify
@@ -82,8 +81,7 @@ class AIoTSpecValueListItem:
 
     @staticmethod
     def from_spec(item: dict) -> 'AIoTSpecValueListItem':
-        if ('name' not in item or 'value' not in item or
-                'description' not in item):
+        if 'name' not in item or 'value' not in item or 'description' not in item:
             raise AIoTSpecError('invalid value list item, %s')
         # Slugify name and convert to lower-case.
         cache = {
@@ -170,6 +168,8 @@ class AIoTSpecValueList:
 
 class _AIoTSpecBase:
     """AIoT 规范基类."""
+    # nnd：属性对应aam_prop_name，服务对应aam_cmd
+    nnd: str
     type_: str
     description: str
     description_trans: Optional[str]
@@ -178,10 +178,12 @@ class _AIoTSpecBase:
 
     # External params
     platform: Optional[str]
+    entity_category: Optional[str]
 
     spec_id: int
 
     def __init__(self, spec: dict) -> None:
+        self.nnd = spec['nnd']
         self.type_ = spec['type']
         self.description = spec['description']
 
@@ -190,8 +192,9 @@ class _AIoTSpecBase:
         self.name = spec.get('name', 'aimy')
 
         self.platform = None
+        self.entity_category = None
 
-        self.spec_id = hash(f'{self.type_}.{self.iid}')
+        self.spec_id = hash(f'{self.type_}.{self.nnd}')
 
     def __hash__(self) -> int:
         return self.spec_id
@@ -349,17 +352,17 @@ class AIoTSpecEvent(_AIoTSpecBase):
         self.argument = argument or []
         self.service = service
 
-        self.spec_id = hash(f'e.{self.name}.{self.service.iid}.{self.iid}')
+        self.spec_id = hash(f'e.{self.name}.{self.service.nnd}.{self.nnd}')
 
     def dump(self) -> dict:
         return {
             'type': self.type_,
             'name': self.name,
-            'iid': self.iid,
+            'nnd': self.nnd,
             'description': self.description,
             'description_trans': self.description_trans,
             'proprietary': self.proprietary,
-            'argument': [prop.iid for prop in self.argument],
+            'argument': [prop.nnd for prop in self.argument],
         }
 
 
@@ -381,17 +384,17 @@ class AIoTSpecAction(_AIoTSpecBase):
         self.out = out or []
         self.service = service
 
-        self.spec_id = hash(f'a.{self.name}.{self.service.iid}.{self.iid}')
+        self.spec_id = hash(f'a.{self.name}.{self.service.nnd}.{self.nnd}')
 
     def dump(self) -> dict:
         return {
             'type': self.type_,
             'name': self.name,
-            'iid': self.iid,
+            'nnd': self.nnd,
             'description': self.description,
             'description_trans': self.description_trans,
-            'in': [prop.iid for prop in self.in_],
-            'out': [prop.iid for prop in self.out],
+            'in': [prop.nnd for prop in self.in_],
+            'out': [prop.nnd for prop in self.out],
             'proprietary': self.proprietary,
         }
 
@@ -412,7 +415,7 @@ class AIoTSpecService(_AIoTSpecBase):
         return {
             'type': self.type_,
             'name': self.name,
-            'iid': self.iid,
+            'nnd': self.nnd,
             'description': self.description,
             'description_trans': self.description_trans,
             'proprietary': self.proprietary,
@@ -435,7 +438,13 @@ class AIoTSpecInstance:
     device_class: Any
     icon: str
 
-    def __init__(self, urn: str, name: str, description: str, description_trans: str) -> None:
+    def __init__(
+            self,
+            urn: str,
+            name: str,
+            description: str,
+            description_trans: str
+    ) -> None:
         self.urn = urn
         self.name = name
         self.description = description
@@ -466,28 +475,30 @@ class AIoTSpecInstance:
             for event in service['events']:
                 spec_event = AIoTSpecEvent(spec=event, service=spec_service)
                 arg_list: list[AIoTSpecProperty] = []
-                for piid in event['argument']:
+                for pnnd in event['argument']:
                     for prop in spec_service.properties:
-                        if prop.iid == piid:
+                        if prop.nnd == pnnd:
                             arg_list.append(prop)
                             break
                 spec_event.argument = arg_list
                 spec_service.events.append(spec_event)
             for action in service['actions']:
-                spec_action = AIoTSpecAction(spec=action,
-                                             service=spec_service,
-                                             in_=action['in'])
+                spec_action = AIoTSpecAction(
+                    spec=action,
+                    service=spec_service,
+                    in_=action['in']
+                )
                 in_list: list[AIoTSpecProperty] = []
-                for piid in action['in']:
+                for pnnd in action['in']:
                     for prop in spec_service.properties:
-                        if prop.iid == piid:
+                        if prop.nnd == pnnd:
                             in_list.append(prop)
                             break
                 spec_action.in_ = in_list
                 out_list: list[AIoTSpecProperty] = []
-                for piid in action['out']:
+                for pnnd in action['out']:
                     for prop in spec_service.properties:
-                        if prop.iid == piid:
+                        if prop.nnd == pnnd:
                             out_list.append(prop)
                             break
                 spec_action.out = out_list
@@ -560,17 +571,6 @@ class AIoTSpecParser:
         """MUST await init first !!!"""
         if not urn_list:
             return False
-        if await self._std_lib.refresh_async():
-            if not await self._storage.save_async(
-                    domain=self._DOMAIN,
-                    name='spec_std_lib',
-                    data={
-                        'data': self._std_lib.dump(),
-                        'ts': int(time.time())
-                    }):
-                _LOGGER.error('save spec std lib failed')
-        else:
-            raise AIoTSpecError('get spec std lib failed')
         success_count = 0
         for index in range(0, len(urn_list), 5):
             batch = urn_list[index:index + 5]
@@ -591,7 +591,11 @@ class AIoTSpecParser:
             type_=dict
         )  # type: ignore
 
-    async def __cache_set(self, urn: str, data: dict) -> bool:
+    async def __cache_set(
+            self,
+            urn: str,
+            data: dict
+    ) -> bool:
         if platform.system() == 'Windows':
             urn = urn.replace(':', '_')
         return await self._storage.save_async(

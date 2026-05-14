@@ -17,7 +17,8 @@ from paho.mqtt.client import (
     MQTT_ERR_UNKNOWN,
     Client,
     MQTTv5,
-    MQTTMessage)
+    MQTTMessage
+)
 
 from .aiot_error import AIoTMipsError
 # pylint: disable=relative-beyond-top-level
@@ -260,17 +261,13 @@ class _MipsClient(ABC):
     @final
     @property
     def mips_state(self) -> bool:
-        """mips connect state.
-
-        Returns:
-            bool: True: connected, False: disconnected
-        """
+        """获取 mips 连接状态 """
         if self._mqtt:
             return self._mqtt.is_connected()
         return False
 
     def connect(self, thread_name: Optional[str] = None) -> None:
-        """mips connect."""
+        """mips 连接"""
         # Start mips thread
         if self._mips_thread:
             return
@@ -281,12 +278,12 @@ class _MipsClient(ABC):
         self._mips_thread.start()
 
     async def connect_async(self) -> None:
-        """mips connect async."""
+        """mips 异步连接"""
         self.connect()
         await self._event_connect.wait()
 
     def disconnect(self) -> None:
-        """mips disconnect."""
+        """mips 断开连接"""
         if not self._mips_thread:
             return
         self._internal_loop.call_soon_threadsafe(self.__mips_disconnect)
@@ -295,7 +292,7 @@ class _MipsClient(ABC):
         self._internal_loop.close()
 
     async def disconnect_async(self) -> None:
-        """mips disconnect async."""
+        """mips 异步断开连接"""
         self.disconnect()
         await self._event_disconnect.wait()
 
@@ -360,12 +357,12 @@ class _MipsClient(ABC):
                 self._mqtt.disable_logger()
 
     @final
-    def sub_mips_state(self, key: str, handler: Callable[[str, bool], Coroutine]) -> bool:
-        """Subscribe mips state.
-        NOTICE: callback to main loop thread
-        This will be called before the client is connected.
-        So use mutex instead of IPC.
-        """
+    def sub_mips_state(
+            self,
+            key: str,
+            handler: Callable[[str, bool], Coroutine]
+    ) -> bool:
+        """订阅 mips 状态"""
         if isinstance(key, str) is False or handler is None:
             raise AIoTMipsError('invalid params')
         state = _MipsState(key=key, handler=handler)
@@ -376,7 +373,7 @@ class _MipsClient(ABC):
 
     @final
     def unsub_mips_state(self, key: str) -> bool:
-        """Unsubscribe mips state."""
+        """取消订阅 mips 状态"""
         if isinstance(key, str) is False:
             raise AIoTMipsError('invalid params')
         with self._mips_state_sub_map_lock:
@@ -396,7 +393,12 @@ class _MipsClient(ABC):
         ...
 
     @abstractmethod
-    def unsub_prop(self, did: str, aam_cmd: Optional[str] = None, aam_prop_name: Optional[str] = None) -> bool:
+    def unsub_prop(
+            self,
+            did: str,
+            aam_cmd: Optional[str] = None,
+            aam_prop_name: Optional[str] = None
+    ) -> bool:
         ...
 
     @abstractmethod
@@ -411,26 +413,41 @@ class _MipsClient(ABC):
         ...
 
     @abstractmethod
-    def unsub_event(self, did: str, aam_cmd: Optional[str] = None, aam_prop_name: Optional[str] = None) -> bool:
+    def unsub_event(
+            self,
+            did: str,
+            aam_cmd: Optional[str] = None,
+            aam_prop_name: Optional[str] = None
+    ) -> bool:
         ...
 
     @abstractmethod
-    def _on_mips_message(self, topic: str, payload: bytes) -> None:
+    def _on_mips_message(
+            self,
+            topic: str,
+            payload: bytes
+    ) -> None:
         ...
 
     @abstractmethod
-    def _on_mips_connect(self, rc: int, props: dict) -> None:
+    def _on_mips_connect(
+            self,
+            rc: int,
+            props: dict
+    ) -> None:
         ...
 
     @abstractmethod
-    def _on_mips_disconnect(self, rc: int, props: dict) -> None:
+    def _on_mips_disconnect(
+            self,
+            rc: int,
+            props: dict
+    ) -> None:
         ...
 
     @final
     def _mips_sub_internal(self, topic: str) -> None:
-        """mips subscribe.
-        NOTICE: Internal function, only mips threads are allowed to call
-        """
+        """mips 订阅"""
         self.__thread_check()
         if not self._mqtt or not self._mqtt.is_connected():
             self.log_error(f'mips sub when not connected, {topic}')
@@ -447,9 +464,7 @@ class _MipsClient(ABC):
 
     @final
     def _mips_unsub_internal(self, topic: str) -> None:
-        """mips unsubscribe.
-        NOTICE: Internal function, only mips threads are allowed to call
-        """
+        """mips 取消订阅"""
         self.__thread_check()
         if not self._mqtt or not self._mqtt.is_connected():
             self.log_debug(f'mips unsub when not connected, {topic}')
@@ -457,11 +472,9 @@ class _MipsClient(ABC):
         try:
             result, mid = self._mqtt.unsubscribe(topic=topic)
             if (result == MQTT_ERR_SUCCESS) or (result == MQTT_ERR_NO_CONN):
-                self.log_debug(
-                    f'mips unsub internal success, {result}, {mid}, {topic}')
+                self.log_debug(f'mips unsub internal success, {result}, {mid}, {topic}')
                 return
-            self.log_error(
-                f'mips unsub internal error, {result}, {mid}, {topic}')
+            self.log_error(f'mips unsub internal error, {result}, {mid}, {topic}')
         except Exception as err:  # pylint: disable=broad-exception-caught
             # Catch all exception
             self.log_error(f'mips unsub internal error, {topic}, {err}')
@@ -586,7 +599,7 @@ class _MipsClient(ABC):
 
     def __on_connect_failed(self, client: Client, user_data: Any) -> None:
         self.log_error('mips connect failed')
-        # Try to reconnect
+        # 尝试重连
         self.__mips_try_reconnect()
 
     def __on_disconnect(self, client, user_data, rc, props) -> None:
@@ -614,9 +627,9 @@ class _MipsClient(ABC):
                         continue
                     self.main_loop.call_soon_threadsafe(self.main_loop.create_task, item.handler(item.key, False))
 
-        # Try to reconnect
+        # 尝试重连
         self.__mips_try_reconnect()
-        # Set event
+        # 设置事件
         self.main_loop.call_soon_threadsafe(self._event_disconnect.set)
         self.main_loop.call_soon_threadsafe(self._event_connect.clear)
 
@@ -765,7 +778,7 @@ class _MipsClient(ABC):
 
 
 class MipsLanClient(_MipsClient):
-    """AIoT Pub/Sub Lan Client."""
+    """AIoT 发布/订阅 Lan 客户端"""
     # pylint: disable=unused-argument
     # pylint: disable=inconsistent-quotes
     _msg_matcher: AIoTMatcher

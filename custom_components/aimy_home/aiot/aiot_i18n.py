@@ -17,7 +17,9 @@ class AIoTI18n:
     _data: dict
 
     def __init__(
-            self, lang: str, loop: Optional[asyncio.AbstractEventLoop]
+            self,
+            lang: str,
+            loop: Optional[asyncio.AbstractEventLoop]
     ) -> None:
         self._main_loop = loop or asyncio.get_event_loop()
         self._lang = lang
@@ -30,10 +32,10 @@ class AIoTI18n:
         self._data = {}
         try:
             data = await self._main_loop.run_in_executor(
-                None, load_json_file,
-                os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    f'i18n/{self._lang}.json'))
+                None,
+                load_json_file,
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), f'i18n/{self._lang}.json')
+            )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.error('load file error, %s', err)
             return
@@ -47,7 +49,9 @@ class AIoTI18n:
         self._data = {}
 
     def translate(
-            self, key: str, replace: Optional[dict[str, str]] = None
+            self,
+            key: str,
+            replace: Optional[dict[str, str]] = None
     ) -> Union[str, dict, None]:
         result = self._data
         for item in key.split('.'):
