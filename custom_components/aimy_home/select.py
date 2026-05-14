@@ -32,7 +32,11 @@ async def async_setup_entry(
 
 
 class AimySelectEntity(AIoTPropertyEntity, SelectEntity):
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecProperty) -> None:
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecProperty
+    ) -> None:
         """Initialize the Select."""
         super().__init__(aiot_device=aiot_device, spec=spec)
         if self._value_list:

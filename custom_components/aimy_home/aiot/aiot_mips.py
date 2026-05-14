@@ -386,8 +386,8 @@ class _MipsClient(ABC):
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[int] = None,
+            snnd: Optional[str] = None,
+            pnnd: Optional[int] = None,
             handler_ctx: Any = None
     ) -> bool:
         ...
@@ -396,8 +396,8 @@ class _MipsClient(ABC):
     def unsub_prop(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            pnnd: Optional[str] = None
     ) -> bool:
         ...
 
@@ -406,8 +406,8 @@ class _MipsClient(ABC):
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None,
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None,
             handler_ctx: Any = None
     ) -> bool:
         ...
@@ -416,8 +416,8 @@ class _MipsClient(ABC):
     def unsub_event(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None
     ) -> bool:
         ...
 
@@ -487,21 +487,17 @@ class _MipsClient(ABC):
             wait_for_publish: bool = False,
             timeout_ms: int = 10000
     ) -> bool:
-        """mips publish message.
-        NOTICE: Internal function, only mips threads are allowed to call
-
-        """
+        """mips 发布消息"""
         self.__thread_check()
         if not self._mqtt or not self._mqtt.is_connected():
             return False
         try:
             handle = self._mqtt.publish(topic=topic, payload=payload, qos=self.MIPS_QOS)
-            # self.log_debug(f'_mips_publish_internal, {topic}, {payload}')
             if wait_for_publish is True:
                 handle.wait_for_publish(timeout_ms / 1000.0)
             return True
         except Exception as err:  # pylint: disable=broad-exception-caught
-            # Catch other exception
+            # 捕捉其他异常
             self.log_error(f'mips publish internal error, {err}')
         return False
 
@@ -524,7 +520,7 @@ class _MipsClient(ABC):
 
     def __mqtt_loop_handler(self) -> None:
         try:
-            # If the main loop is closed, stop the internal loop immediately
+            # 如果主循环关闭，立即停止内部循环
             if self.main_loop.is_closed():
                 self.log_debug('The main loop is closed, stop the internal loop.')
                 if not self._internal_loop.is_closed():
@@ -540,7 +536,7 @@ class _MipsClient(ABC):
                 self._internal_loop.add_writer(
                     self._mqtt_fd, self.__mqtt_write_handler)
         except Exception as err:  # pylint: disable=broad-exception-caught
-            # Catch all exception
+            # 捕捉其他异常
             self.log_error(f'__mqtt_loop_handler, {err}')
             raise err
 
@@ -550,7 +546,7 @@ class _MipsClient(ABC):
         # callback_api_version=CallbackAPIVersion.VERSION2,
         self._mqtt = Client(client_id=self._client_id, protocol=MQTTv5)
         self._mqtt.enable_logger(logger=self._mqtt_logger)
-        # Set mqtt config
+        # 设置 mqtt 配置
         if self._username:
             self._mqtt.username_pw_set(username=self._username, password=self._password)
         if (
@@ -571,9 +567,9 @@ class _MipsClient(ABC):
         self._mqtt.on_connect_fail = self.__on_connect_failed
         self._mqtt.on_disconnect = self.__on_disconnect
         self._mqtt.on_message = self.__on_message
-        # Connect to mips
+        # 连接到 mips
         self.__mips_start_connect_tries()
-        # Run event loop
+        # 运行事件循环
         self._internal_loop.run_forever()
         self.log_info('mips_loop_thread exit!')
 
@@ -613,7 +609,7 @@ class _MipsClient(ABC):
                 self._internal_loop.remove_reader(self._mqtt_fd)
                 self._internal_loop.remove_writer(self._mqtt_fd)
                 self._mqtt_fd = -1
-            # Clear retry sub
+            # 清除重试订阅
             if self._mips_sub_pending_timer:
                 self._mips_sub_pending_timer.cancel()
                 self._mips_sub_pending_timer = None
@@ -687,7 +683,7 @@ class _MipsClient(ABC):
             self._mips_reconnect_timer.cancel()
             self._mips_reconnect_timer = None
         try:
-            # Try clean mqtt fd before mqtt connect
+            # 在mqtt连接之前尝试清理mqtt fd
             if self._mqtt_timer:
                 self._mqtt_timer.cancel()
                 self._mqtt_timer = None
@@ -818,8 +814,8 @@ class MipsLanClient(_MipsClient):
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None,
+            snnd: Optional[str] = None,
+            pnnd: Optional[str] = None,
             handler_ctx: Any = None
     ) -> bool:
         """订阅属性"""
@@ -855,8 +851,8 @@ class MipsLanClient(_MipsClient):
     def unsub_prop(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            pnnd: Optional[str] = None
     ) -> bool:
         """取消订阅属性"""
         if not isinstance(did, str):
@@ -869,8 +865,8 @@ class MipsLanClient(_MipsClient):
             self,
             did: str,
             handler: Callable[[dict, Any], None],
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None,
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None,
             handler_ctx: Any = None
     ) -> bool:
         """订阅事件"""
@@ -879,7 +875,7 @@ class MipsLanClient(_MipsClient):
         # Spelling error: event_occured
         topic: str = (
             f'device/{did}/up/event_occured/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
 
         def on_event_msg(topic: str, payload: str, ctx: Any) -> None:
             try:
@@ -897,7 +893,7 @@ class MipsLanClient(_MipsClient):
                 return
             if handler:
                 self.log_debug('on on_event_msg, %s', payload)
-                msg['params']['from'] = 'cloud'
+                msg['params']['from'] = 'lan'
                 handler(msg['params'], ctx)
 
         return self.__reg_broadcast_external(topic=topic, handler=on_event_msg, handler_ctx=handler_ctx)
@@ -906,8 +902,8 @@ class MipsLanClient(_MipsClient):
     def unsub_event(
             self,
             did: str,
-            aam_cmd: Optional[str] = None,
-            aam_prop_name: Optional[str] = None
+            snnd: Optional[str] = None,
+            ennd: Optional[str] = None
     ) -> bool:
         """取消订阅事件"""
         if not isinstance(did, str):
@@ -915,7 +911,7 @@ class MipsLanClient(_MipsClient):
         # Spelling error: event_occured
         topic: str = (
             f'device/{did}/up/event_occured/'
-            f'{"#" if aam_cmd is None or aam_prop_name is None else f"{aam_cmd}/{aam_prop_name}"}')
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
         return self.__unreg_broadcast_external(topic=topic)
 
     @final

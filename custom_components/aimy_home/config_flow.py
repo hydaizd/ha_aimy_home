@@ -101,14 +101,14 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # 　存储路径
         if not self._storage_path:
             self._storage_path = self.hass.config.path('.storage', DOMAIN)
-        # AIoT storage
+        # AIoT 存储
         self._aiot_storage = self.hass.data[DOMAIN].get('aiot_storage', None)
         if not self._aiot_storage:
             self._aiot_storage = AIoTStorage(root_path=self._storage_path, loop=self._main_loop)
             self.hass.data[DOMAIN]['aiot_storage'] = self._iot_storage
             _LOGGER.info('async_step_user, create aiot storage, %s', self._storage_path)
 
-        # AIoT network
+        # AIoT 网络
         network_detect_addr = (await self._aiot_storage.load_user_config_async(
             uname='global_config',
             lan_server='all',

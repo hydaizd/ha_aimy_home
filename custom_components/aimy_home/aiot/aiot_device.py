@@ -22,9 +22,7 @@ from .aiot_spec import (
 )
 from .common import (
     slugify_did,
-    slugify_name,
-    get_service_name,
-    get_prop_name
+    slugify_name
 )
 from .const import DOMAIN
 
@@ -91,6 +89,8 @@ class AIoTDevice:
             device_info: dict[str, Any],
             spec_instance: AIoTSpecInstance
     ) -> None:
+        urn_strs: list[str] = device_info['urn'].split(':')
+
         self.aiot_client = aiot_client
         self.spec_instance = spec_instance
         self._entity_map = {}
@@ -100,9 +100,9 @@ class AIoTDevice:
         self._did = device_info['did']
         self._name = device_info.get('name', '')
 
-        self._model = device_info.get('skuId', '')
+        self._model = urn_strs[2]
         self._manufacturer = device_info.get('manufacturer', '艾美科技')
-        self._fw_version = device_info.get('version', '')
+        self._fw_version = device_info.get('version')
 
         self._sub_id = 0
         self._device_state_sub_list = {}
@@ -113,11 +113,11 @@ class AIoTDevice:
         self._action_list = {}
 
         # 新增自定义
-        self._mid_bind_id = device_info.get('midBindId', '')
-        self._product_key = device_info.get('productKey', '')
-        self._group_id = device_info.get('groupId', '')
-        self._endpoint = device_info.get('endpoint', '')
-        self._endpoint_name = device_info.get('endpointName', '')
+        self._product_key = urn_strs[1]
+        self._mid_bind_id = urn_strs[3]
+        self._group_id = device_info.get('group_id')
+        self._endpoint = urn_strs[4]
+        self._endpoint_name = device_info.get('ep_name')
 
         # Sub device state
         self.aiot_client.sub_device_state(self._did, self.__on_device_state_changed)
@@ -609,14 +609,10 @@ class AIoTServiceEntity(Entity):
 
     async def get_property_async(self, prop: AIoTSpecProperty) -> Any:
         if not prop:
-            _LOGGER.error(
-                'get property failed, property is None, %s, %s',
-                self.entity_id, self.name)
+            _LOGGER.error('get property failed, property is None, %s, %s', self.entity_id, self.name)
             return None
         if prop not in self.entity_data.props:
-            _LOGGER.error(
-                'get property failed, unknown property, %s, %s, %s',
-                self.entity_id, self.name, prop.name)
+            _LOGGER.error('get property failed, unknown property, %s, %s, %s', self.entity_id, self.name, prop.name)
             return None
         value: Any = prop.value_format(
             await self.aiot_device.aiot_client.get_prop_async(
@@ -740,10 +736,6 @@ class AIoTPropertyEntity(Entity):
 
     _pending_write_ha_state_timer: Optional[asyncio.TimerHandle]
 
-    # 新增自定义
-    _aam_cmd: str  # 修改属性的命令
-    _param_key: str  # 修改属性的参数key
-
     def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecProperty) -> None:
         if aiot_device is None or spec is None or spec.service is None:
             raise AIoTDeviceError('init error, invalid params')
@@ -775,10 +767,6 @@ class AIoTPropertyEntity(Entity):
             'new aiot property entity, %s, %s, %s, %s',
             self.aiot_device.name, self._attr_name, spec.platform, self.entity_id
         )
-
-        # 解析属性设置命令和参数
-        self._aam_cmd = get_service_name(spec.service.type_)
-        self._param_key = get_prop_name(spec.type_)
 
     @property
     def device_info(self) -> Optional[DeviceInfo]:
@@ -886,7 +874,8 @@ class AIoTPropertyEntity(Entity):
         self.async_write_ha_state()
 
     def __gen_json_data(self, value: Any) -> dict:
-        json_data = {self._param_key: value}
+        """生成json格式请求参数"""
+        json_data = {self.spec.nnd: value}
 
         # 如果属性有group_key，需要收集同一组的其他属性一起发送
         if self.spec.group_key:

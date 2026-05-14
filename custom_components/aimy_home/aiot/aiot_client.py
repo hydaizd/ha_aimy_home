@@ -12,7 +12,7 @@ from typing import Optional, Callable, final, Any
 from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
 
-from .aiot_error import AIoTClientError, AIoTErrorCode
+from .aiot_error import AIoTClientError
 from .aiot_i18n import AIoTI18n
 from .aiot_lan import AIoTAuthClient, AIoTHttpClient
 from .aiot_mdns import MipsService
@@ -61,29 +61,29 @@ class AIoTClient:
     _entry_id: str
     _entry_data: dict
     _lan_server: str
-    # AIoT network monitor
+    # AIoT 网络监控
     _network: AIoTNetwork
-    # AIoT storage client
+    # AIoT 存储客户端
     _storage: AIoTStorage
-    # AIoT mips service
+    # AIoT mips 服务
     _mips_service: MipsService
-    # AIoT auth client
+    # AIoT 认证客户端
     _auth: AIoTAuthClient
-    # AIoT http client
+    # AIoT http 客户端
     _http: AIoTHttpClient
-    # AIoT i18n client
+    # AIoT i18n 客户端
     _i18n: AIoTI18n
-    # User config, store in the .storage/aimy_home
+    # 用户配置, 存储存放路径 .storage/aimy_home
     _user_config: dict
 
-    # Lan mips client
+    # Lan mips 客户端
     _mips_lan: MipsLanClient
 
-    # Device list load from local storage, {did: <info>}
+    # 从本地缓存加载的设备列表, {did: <info>}
     _device_list_cache: dict[str, dict]
-    # Device list obtained from lan, {did: <info>}
+    # 从局域网获取的设备列表, {did: <info>}
     _device_list_lan: dict[str, dict]
-    # Device list update timestamp
+    # 设备列表更新时间戳
     _device_list_update_ts: int
 
     _sub_tree: AIoTMatcher
@@ -92,19 +92,19 @@ class AIoTClient:
     _mips_local_state_changed_timers: dict[str, asyncio.TimerHandle]
     _refresh_token_timer: Optional[asyncio.TimerHandle]
     _refresh_lan_devices_timer: Optional[asyncio.TimerHandle]
-    # Refresh prop
+    # 刷新属性
     _refresh_props_list: dict[str, dict]
     _refresh_props_timer: Optional[asyncio.TimerHandle]
     _refresh_props_retry_count: int
 
-    # Persistence notify handler, params: notify_id, title, message
+    # 持久性通知处理程序，参数：notify_id，title，message
     _persistence_notify: Callable[[str, Optional[str], Optional[str]], None]
-    # Device list changed notify
+    # 设备列表更改通知
     _show_devices_changed_notify_timer: Optional[asyncio.TimerHandle]
-    # Display devices changed notify
+    # 显示设备更改通知
     _display_devs_notify: list[str]
     _display_notify_content_hash: Optional[int]
-    # Display binary mode
+    # 显示二进制模式
     _display_binary_text: bool
     _display_binary_bool: bool
 
@@ -505,17 +505,11 @@ class AIoTClient:
                 in_list=in_list
             )
             if result:
-                rc = result.get('code', AIoTErrorCode.CODE_MIPS_INVALID_RESULT.value)
-                if rc in [0, 1]:
-                    return result.get('out', [])
-                if rc in [-704010000, -704042011]:
-                    # Device remove or offline
-                    _LOGGER.error('device removed or offline, %s', did)
-                    self._main_loop.create_task(
-                        await self.__refresh_lan_device_with_dids_async(dids=[did])
-                    )
+                rc = result.get('success')
+                if rc in ['true']:
+                    return result.get('data', [])
                 raise AIoTClientError(self.__get_exec_error_with_rc(rc=rc))
-        # TODO: Show error message
+        # TODO: 显示错误信息
         _LOGGER.error('client action failed, %s, %s', did, snnd)
         return []
 
@@ -532,7 +526,8 @@ class AIoTClient:
 
         topic = (
             f'{did}/p/'
-            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}')
+            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}'
+        )
         self._sub_tree[topic] = AIoTClientSub(topic=topic, handler=handler, handler_ctx=handler_ctx)
         _LOGGER.debug('client sub prop, %s', topic)
         return True
@@ -545,7 +540,8 @@ class AIoTClient:
     ) -> bool:
         topic = (
             f'{did}/p/'
-            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}')
+            f'{"#" if snnd is None or pnnd is None else f"{snnd}/{pnnd}"}'
+        )
         if self._sub_tree.get(topic=topic):
             del self._sub_tree[topic]
         _LOGGER.debug('client unsub prop, %s', topic)
@@ -563,7 +559,8 @@ class AIoTClient:
             raise AIoTClientError(f'did not exist, {did}')
         topic = (
             f'{did}/e/'
-            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}'
+        )
         self._sub_tree[topic] = AIoTClientSub(topic=topic, handler=handler, handler_ctx=handler_ctx)
         _LOGGER.debug('client sub event, %s', topic)
         return True
@@ -576,7 +573,8 @@ class AIoTClient:
     ) -> bool:
         topic = (
             f'{did}/e/'
-            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}')
+            f'{"#" if snnd is None or ennd is None else f"{snnd}/{ennd}"}'
+        )
         if self._sub_tree.get(topic=topic):
             del self._sub_tree[topic]
         _LOGGER.debug('client unsub event, %s', topic)
@@ -588,7 +586,7 @@ class AIoTClient:
             handler: Callable[[str, AIoTDeviceState, Any], None],
             handler_ctx: Any = None
     ) -> bool:
-        """Call callback handler in main loop"""
+        """在主循环中回调处理"""
         if did not in self._device_list_cache:
             raise AIoTClientError(f'did not exist, {did}')
         self._sub_device_state[did] = MipsDeviceState(did=did, handler=handler, handler_ctx=handler_ctx)
@@ -603,16 +601,16 @@ class AIoTClient:
     async def remove_device_async(self, did: str) -> None:
         if did not in self._device_list_cache:
             return
-        # Unsub
+        # 取消订阅
         self.__unsub_from(did)
 
-        # Storage
+        # 存储
         await self._storage.save_async(
             domain='aiot_devices',
             name=f'{self._uname}_{self._lan_server}',
             data=self._device_list_cache
         )
-        # Update notify
+        # 更改通知
         self.__request_show_devices_changed_notify()
 
     async def remove_device2_async(self, did_tag: str) -> None:
@@ -696,7 +694,7 @@ class AIoTClient:
         if state:
             # 连接
             self.__request_refresh_lan_devices(immediately=True)
-            # Sub cloud device state
+            # 订阅lan设备状态
             for did in list(self._device_list_cache.keys()):
                 self._mips_lan.sub_device_state(did=did, handler=self.__on_lan_device_state_changed)
         else:
@@ -704,7 +702,7 @@ class AIoTClient:
             for did, info in self._device_list_lan.items():
                 lan_state_old: Optional[bool] = info.get('online', None)
                 if not lan_state_old:
-                    # Cloud state is None or False, no need to update
+                    # Lan 为None或False，无需更新
                     continue
                 info['online'] = False
                 if did not in self._device_list_cache:
@@ -749,11 +747,11 @@ class AIoTClient:
 
     @final
     def __on_prop_msg(self, params: dict, ctx: Any) -> None:
-        """params MUST contain did, siid, piid, value"""
-        # BLE device has no online/offline msg
+        """参数必须包含 did, snnd, pnnd, value"""
+        # BLE设备没有在线/离线消息
         try:
             subs: list[AIoTClientSub] = list(
-                self._sub_tree.iter_match(f'{params["did"]}/p/{params["siid"]}/{params["piid"]}')
+                self._sub_tree.iter_match(f'{params["did"]}/p/{params["snnd"]}/{params["pnnd"]}')
             )
             for sub in subs:
                 sub.handler(params, sub.handler_ctx)
@@ -764,7 +762,7 @@ class AIoTClient:
     def __on_event_msg(self, params: dict, ctx: Any) -> None:
         try:
             subs: list[AIoTClientSub] = list(
-                self._sub_tree.iter_match(f'{params["did"]}/e/{params["siid"]}/{params["eiid"]}')
+                self._sub_tree.iter_match(f'{params["did"]}/e/{params["snnd"]}/{params["ennd"]}')
             )
             for sub in subs:
                 sub.handler(params, sub.handler_ctx)

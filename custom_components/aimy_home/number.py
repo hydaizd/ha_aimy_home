@@ -29,7 +29,11 @@ async def async_setup_entry(
 
 
 class AimyNumberEntity(AIoTPropertyEntity, NumberEntity):
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecProperty) -> None:
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecProperty
+    ) -> None:
         super().__init__(aiot_device=aiot_device, spec=spec)
 
         # Set value range

@@ -77,66 +77,23 @@ def gen_device_urn(product_key: str, sku_id: str, mid_bind_id: str, endpoint: st
     return f'urn:{product_key}:{sku_id}:{mid_bind_id}:{endpoint}'
 
 
-def gen_device_did(mid_bind_id: str, endpoint: str) -> str:
+def gen_device_did(mid_bind_id: str, endpoint: str) -> str | None:
     """生成设备id唯一标识."""
+    if mid_bind_id is None:
+        return None
+    if endpoint is None:
+        endpoint = ''
     return f'{mid_bind_id}.{endpoint}'
 
 
-def get_device_product_key(urn: str) -> str:
-    """获取设备 product_key"""
-    urn_strs: list[str] = urn.split(':')
-    return urn_strs[1]
-
-
-def get_device_sku_id(urn: str) -> str:
-    """获取设备 sku_id"""
-    urn_strs: list[str] = urn.split(':')
-    return urn_strs[2]
-
-
-def get_device_mid_bind_id(urn: str) -> str:
-    """获取设备 mid_bind_id"""
-    urn_strs: list[str] = urn.split(':')
-    return urn_strs[3]
-
-
-def get_device_endpoint(urn: str) -> str:
-    """获取设备 endpoint"""
-    urn_strs: list[str] = urn.split(':')
-    return urn_strs[4]
-
-
-def get_device_did(urn: str) -> str:
-    """获取设备did唯一标识"""
-    urn_strs: list[str] = urn.split(':')
-    return f'{urn_strs[3]}.{urn_strs[4]}'
-
-
-def get_service_name(type_: str) -> str:
-    """Get service name from type."""
-    service_strs: list[str] = type_.split(':')
-    return service_strs[4]
-
-
-def get_prop_name(type_: str) -> str:
-    """Get property name from type."""
-    prop_strs: list[str] = type_.split(':')
-    return prop_strs[3]
-
-
-def get_prop_endpoint(type_: str) -> str:
-    """Get property endpoint from type."""
-    prop_strs: list[str] = type_.split(':')
-    return prop_strs[4]
-
-
-def get_prop_group_key(urn: str, service_name: str, prop_name: str) -> str | None:
+def get_prop_group_key(urn: str, snnd: str, pnnd: str) -> str | None:
     """ 获取属性组key，同组属性需要一起发送 """
-    product_key = get_device_product_key(urn)
-    sku_id = get_device_sku_id(urn)
+    urn_strs: list[str] = urn.split(':')
+    product_key = urn_strs[1]
+    sku_id = urn_strs[2]
 
-    if service_name == 'set_delay_switch' and prop_name in ['OnTime', 'OffWaitTime']:
-        return f'{product_key}_{sku_id}_{service_name}'
+    if snnd == 'set_delay_switch' and pnnd in ['OnTime', 'OffWaitTime']:
+        return f'{product_key}_{sku_id}_{snnd}'
     return None
 
 
@@ -167,7 +124,9 @@ class AIoTHttp:
 
     @staticmethod
     def get(
-            url: str, params: Optional[dict] = None, headers: Optional[dict] = None
+            url: str,
+            params: Optional[dict] = None,
+            headers: Optional[dict] = None
     ) -> Optional[str]:
         full_url = url
         if params:
@@ -181,48 +140,57 @@ class AIoTHttp:
 
     @staticmethod
     def get_json(
-            url: str, params: Optional[dict] = None, headers: Optional[dict] = None
+            url: str,
+            params: Optional[dict] = None,
+            headers: Optional[dict] = None
     ) -> Optional[dict]:
         response = AIoTHttp.get(url, params, headers)
         return json.loads(response) if response else None
 
     @staticmethod
     def post(
-            url: str, data: Optional[dict] = None, headers: Optional[dict] = None
+            url: str,
+            data: Optional[dict] = None,
+            headers: Optional[dict] = None
     ) -> Optional[str]:
         pass
 
     @staticmethod
     def post_json(
-            url: str, data: Optional[dict] = None, headers: Optional[dict] = None
+            url: str,
+            data: Optional[dict] = None,
+            headers: Optional[dict] = None
     ) -> Optional[dict]:
         response = AIoTHttp.post(url, data, headers)
         return json.loads(response) if response else None
 
     @staticmethod
     async def get_async(
-            url: str, params: Optional[dict] = None, headers: Optional[dict] = None,
+            url: str,
+            params: Optional[dict] = None,
+            headers: Optional[dict] = None,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> Optional[str]:
         # TODO: Use aiohttp
         ev_loop = loop or asyncio.get_running_loop()
-        return await ev_loop.run_in_executor(
-            None, AIoTHttp.get, url, params, headers)
+        return await ev_loop.run_in_executor(None, AIoTHttp.get, url, params, headers)
 
     @staticmethod
     async def get_json_async(
-            url: str, params: Optional[dict] = None, headers: Optional[dict] = None,
+            url: str,
+            params: Optional[dict] = None,
+            headers: Optional[dict] = None,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> Optional[dict]:
         ev_loop = loop or asyncio.get_running_loop()
-        return await ev_loop.run_in_executor(
-            None, AIoTHttp.get_json, url, params, headers)
+        return await ev_loop.run_in_executor(None, AIoTHttp.get_json, url, params, headers)
 
     @staticmethod
     async def post_async(
-            url: str, data: Optional[dict] = None, headers: Optional[dict] = None,
+            url: str,
+            data: Optional[dict] = None,
+            headers: Optional[dict] = None,
             loop: Optional[asyncio.AbstractEventLoop] = None
     ) -> Optional[str]:
         ev_loop = loop or asyncio.get_running_loop()
-        return await ev_loop.run_in_executor(
-            None, AIoTHttp.post, url, data, headers)
+        return await ev_loop.run_in_executor(None, AIoTHttp.post, url, data, headers)

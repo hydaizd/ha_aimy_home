@@ -21,7 +21,7 @@ async def async_setup_entry(
     """设置开关平台."""
     device_list: list[AIoTDevice] = hass.data[DOMAIN]['devices'][config_entry.entry_id]
 
-    # 创建开关实体
+    # 创建按键实体
     new_entities = []
     for aiot_device in device_list:
         for action in aiot_device.action_list.get('button', []):
@@ -32,13 +32,17 @@ async def async_setup_entry(
 
 
 class AimyButtonEntity(AIoTActionEntity, ButtonEntity):
-    """Button entities for Aimy Home."""
+    """Aimy Home 按键实体"""
 
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecAction) -> None:
-        """Initialize the Button."""
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecAction
+    ) -> None:
+        """初始化按键"""
         super().__init__(aiot_device=aiot_device, spec=spec)
         # Use default device class
 
     async def async_press(self) -> None:
-        """Press the button."""
+        """按下按键"""
         return await self.action_async()

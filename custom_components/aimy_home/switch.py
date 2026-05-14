@@ -34,10 +34,11 @@ async def async_setup_entry(
 
 class AimySwitchEntity(AIoTPropertyEntity, SwitchEntity):
     """表示智空间盒子开关实体."""
-    _cmd: str
-    _param_key: str
-
-    def __init__(self, aiot_device: AIoTDevice, spec: AIoTSpecProperty) -> None:
+    def __init__(
+            self,
+            aiot_device: AIoTDevice,
+            spec: AIoTSpecProperty
+    ) -> None:
         """初始化开关."""
         super().__init__(aiot_device=aiot_device, spec=spec)
 

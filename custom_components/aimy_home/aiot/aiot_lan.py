@@ -214,9 +214,7 @@ class AIoTHttpClient:
             timeout=timeout
         )
         if http_res.status == 401:
-            raise AIoTHttpError(
-                'aimy_home api get failed, unauthorized(401)', AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN
-            )
+            raise AIoTHttpError('aimy_home api get failed, unauthorized(401)')
         if http_res.status != 200:
             raise AIoTHttpError(f'aimy_home api get failed, {http_res.status}, 'f'{url_path}, {params}')
         res_str = await http_res.text()
@@ -239,9 +237,7 @@ class AIoTHttpClient:
             timeout=timeout
         )
         if http_res.status == 401:
-            raise AIoTHttpError(
-                'aimy_home api get failed, unauthorized(401)', AIoTErrorCode.CODE_HTTP_INVALID_ACCESS_TOKEN
-            )
+            raise AIoTHttpError('aimy_home api get failed, unauthorized(401)')
         if http_res.status != 200:
             raise AIoTHttpError(f'aimy_home api post failed, {http_res.status}, 'f'{url_path}, {data}')
         res_str = await http_res.text()
@@ -297,6 +293,7 @@ class AIoTHttpClient:
             sku_id = device.get('skuId', None)
             endpoint = device.get('endpoint', None)
             mid_bind_id = device.get('midBindId', None)
+            group_id = device.get('groupId', None)
 
             did = gen_device_did(mid_bind_id, endpoint)
             name = device.get('name', None)
@@ -313,11 +310,13 @@ class AIoTHttpClient:
                 continue
             device_infos[did] = {
                 'did': did,
-                'name': name,
                 'urn': urn,
+                'name': name,
                 'model': model,
                 'online': device.get('onlineState', False),
-                'local_ip': device.get('ip_addr', None),
+                'group_id': group_id,
+                'ep_name': device.get('endpointName', ''),
+                'version': device.get('version', '')
             }
         return device_infos
 

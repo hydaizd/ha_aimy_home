@@ -10,10 +10,6 @@ from .aiot_error import AIoTSpecError, AIoTHttpError
 from .aiot_storage import AIoTStorage
 from .common import (
     AIoTHttp,
-    get_device_product_key,
-    get_device_sku_id,
-    get_service_name,
-    get_prop_name,
     get_prop_group_key
 )
 from .const import (
@@ -608,14 +604,13 @@ class AIoTSpecParser:
         """获取产品实例."""
         if not self._entry_data:
             raise AIoTSpecError('entry data is None')
-        product_key = get_device_product_key(urn=urn)
-        sku_id = get_device_sku_id(urn=urn)
+        urn_strs: list[str] = urn.split(':')
         lan_server = self._entry_data['lan_server']
         res_obj = await AIoTHttp.get_json_async(
             url=f'http://{lan_server}:{HTTP_API_PORT}/api/basic/iot-spec-v1/instance',
             params={
-                "productKey": product_key,
-                "skuId": sku_id,
+                "productKey": urn_strs[1],
+                "skuId": urn_strs[2],
             })
 
         if 'data' not in res_obj:
@@ -647,7 +642,7 @@ class AIoTSpecParser:
                 continue
 
             spec_service: AIoTSpecService = AIoTSpecService(spec=service)
-            spec_service.name = get_service_name(service['type'])
+            spec_service.name = spec_service.nnd
 
             for property_ in service.get('properties', []):
                 if 'type' not in property_ or 'description' not in property_ or 'format' not in property_:
@@ -660,11 +655,11 @@ class AIoTSpecParser:
                     format_=property_['format'],
                     unit=unit if unit != 'none' else None
                 )
-                spec_prop.name = get_prop_name(property_['type'])
+                spec_prop.name = spec_prop.nnd
                 # 为None时则根据format判断平台类型
                 spec_prop.platform = self._get_platform(property_)
                 # 获取属性组key
-                spec_prop.group_key = get_prop_group_key(urn, spec_service.name, spec_prop.name)
+                spec_prop.group_key = get_prop_group_key(urn, spec_service.nnd, spec_prop.nnd)
 
                 if 'value-list' in property_:
                     spec_prop.value_list = property_['value-list']
