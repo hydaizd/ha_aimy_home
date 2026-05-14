@@ -2,12 +2,19 @@
   "domain": "aimy_home",
   "name": "艾美智空间",
   "config_flow": true,
-  "documentation": "https://github.com/hydaizd/ha_aimy_home",
   "issue_tracker": "https://github.com/hydaizd/ha_aimy_home/issues",
   "dependencies": [],
   "codeowners": [
-    "@271357630@qq.com"
+    "@Aimy"
   ],
-  "requirements": [],
-  "version": "v1.0.0"
+  "documentation": "https://github.com/hydaizd/ha_aimy_home/blob/main/README.md",
+  "integration_type": "hub",
+  "requirements": [
+    "paho-mqtt",
+    "psutil"
+  ],
+  "version": "v1.0.0",
+  "zeroconf": [
+    "_aiot-central._tcp.local."
+  ]
 }

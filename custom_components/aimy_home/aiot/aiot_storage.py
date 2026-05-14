@@ -439,10 +439,10 @@ class AIoTStorage:
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
         if config is None:
-            # Remove config file
+            # 删除配置文件
             return self.remove(domain=config_domain, name=config_name, type_=dict)
         if replace:
-            # Replace config file
+            # 替换配置文件
             return self.save(domain=config_domain, name=config_name, data=config)
         local_config = (self.load(domain=config_domain, name=config_name, type_=dict)) or {}
         local_config.update(config)  # type: ignore
@@ -457,16 +457,15 @@ class AIoTStorage:
     ) -> bool:
         """更新用户配置."""
         if config is not None and len(config) == 0:
-            # Do nothing
             return True
 
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
         if config is None:
-            # Remove config file
+            # 删除配置文件
             return await self.remove_async(domain=config_domain, name=config_name, type_=dict)
         if replace:
-            # Replace config file
+            # 替换配置文件
             return await self.save_async(domain=config_domain, name=config_name, data=config)
         local_config = (await self.load_async(domain=config_domain, name=config_name, type_=dict)) or {}
         local_config.update(config)  # type: ignore
@@ -480,7 +479,6 @@ class AIoTStorage:
     ) -> dict[str, Any]:
         """加载用户配置."""
         if isinstance(keys, list) and len(keys) == 0:
-            # Do nothing
             return {}
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
@@ -501,7 +499,6 @@ class AIoTStorage:
     ) -> dict:
         """加载用户配置."""
         if isinstance(keys, list) and len(keys) == 0:
-            # Do nothing
             return {}
         config_domain = 'aiot_config'
         config_name = f'{uname}_{lan_server}'
@@ -512,7 +509,8 @@ class AIoTStorage:
             return local_config
         return {
             key: local_config[key] for key in keys
-            if key in local_config}
+            if key in local_config
+        }
 
     def gen_storage_path(
             self,

@@ -278,11 +278,11 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             last_step=False,
             errors={'base': error_reason},
         )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
-        return OptionsFlowHandler(config_entry)
+    #
+    # @staticmethod
+    # @callback
+    # def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
+    #     return OptionsFlowHandler(config_entry)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):

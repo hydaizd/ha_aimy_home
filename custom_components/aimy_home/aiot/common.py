@@ -17,45 +17,21 @@ AIOT_ROOT_PATH: str = path.dirname(path.abspath(__file__))
 
 
 def gen_absolute_path(relative_path: str) -> str:
-    """Generate an absolute path."""
+    """生成绝对路径"""
     return path.join(AIOT_ROOT_PATH, relative_path)
 
-
-def calc_group_id(uid: str, home_id: str) -> str:
-    """Calculate the group ID based on a user ID and a home ID."""
-    return hashlib.sha1(
-        f'{uid}central_service{home_id}'.encode('utf-8')).hexdigest()[:16]
-
-
 def load_json_file(json_file: str) -> dict:
-    """Load a JSON file."""
+    """加载json文件"""
     with open(json_file, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-
-def load_yaml_file(yaml_file: str) -> dict:
-    """Load a YAML file."""
-    with open(yaml_file, 'r', encoding='utf-8') as f:
-        return yaml.load(f, Loader=yaml.FullLoader)
-
-
-def randomize_int(value: int, ratio: float) -> int:
-    """Randomize an integer value."""
-    return int(value * (1 - ratio + random.random() * 2 * ratio))
-
-
-def randomize_float(value: float, ratio: float) -> float:
-    """Randomize a float value."""
-    return value * (1 - ratio + random.random() * 2 * ratio)
-
-
 def slugify_name(name: str, separator: str = '_') -> str:
-    """Slugify a name."""
+    """Slugify 一个名字"""
     return slugify(name, separator=separator)
 
 
 def slugify_did(lan_server: str, did: str) -> str:
-    """Slugify a device id."""
+    """Slugify 一个设备id"""
     return slugify(f'{lan_server}_{did}', separator='_')
 
 
@@ -120,8 +96,7 @@ class AIoTMatcher(MQTTMatcher):
 
 
 class AIoTHttp:
-    """AIoT Common HTTP API."""
-
+    """AIoT 通用 HTTP API."""
     @staticmethod
     def get(
             url: str,
