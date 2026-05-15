@@ -23,6 +23,7 @@ from .aiot.aiot_lan import AIoTAuthClient, AIoTHttpClient
 from .aiot.aiot_mdns import MipsService
 from .aiot.aiot_network import AIoTNetwork
 from .aiot.aiot_storage import AIoTStorage
+from .aiot.common import gen_device_did
 from .aiot.const import (
     DOMAIN,
     NETWORK_REFRESH_INTERVAL,
@@ -65,6 +66,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     # Config cache
     _cc_home_info: dict
+    _cc_device_list_show: dict
     _cc_network_detect_addr: str
     _cc_task_auth: Optional[asyncio.Task[None]]
     _cc_config_rc: Optional[str]
@@ -90,6 +92,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._aiot_http = None
 
         self._cc_home_info = {}
+        self._cc_device_list_show = {}
         self._cc_task_auth = None
         self._cc_config_rc = None
 
@@ -200,7 +203,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if self._aiot_auth:
                 await self._aiot_auth.deinit_async()
                 self._aiot_auth = None
-            return self.config_flow_done()
+            return self.async_show_progress_done(next_step_id='devices_select')
         # pylint: disable=unexpected-keyword-arg
         return self.async_show_progress(
             step_id='auth',
@@ -268,6 +271,12 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception as err:
             _LOGGER.error('save_auth_info error, %s, %s', err, traceback.format_exc())
             raise AIoTConfigError('save_auth_info_error') from err
+        # dev_list
+        dev_list = {
+            device['did']: device
+            for device in list(self._cc_home_info['devices'].values())
+        }
+        self._cc_device_list_show = dict(sorted(dev_list.items()))
 
         if self._aiot_http:
             await self._aiot_http.deinit_async()
@@ -288,11 +297,99 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             last_step=False,
             errors={'base': error_reason},
         )
-    #
-    # @staticmethod
-    # @callback
-    # def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
-    #     return OptionsFlowHandler(config_entry)
+
+    async def async_step_devices_select(self, user_input: Optional[dict] = None):
+        _LOGGER.debug('async_step_devices_select')
+        try:
+            if not user_input:
+                return await self.__show_devices_select_form('')
+
+            device_selected: list = user_input.get('device_infos', [])
+            if not device_selected:
+                return await self.__show_devices_select_form('no_device_selected')
+
+            for device_info in self._cc_home_info['devices'].items():
+                did = gen_device_did(device_info['midBindId'], device_info['endpoint'])
+                if did not in device_selected:
+                    self.device_selected[did] = device_info
+
+            # 本地存储设备列表
+            devices_list: dict[str, dict] = {
+                did: dev_info
+                for did, dev_info in self._cc_home_info['devices'].items()
+            }
+            if not devices_list:
+                return await self.__show_devices_select_form('no_devices')
+
+            if not await self._aiot_storage.save_async(
+                    domain='aiot_devices',
+                    name=f'{self._uname}_{self._lan_server}',
+                    data=self.devices_list
+            ):
+                _LOGGER.error('save devices async failed, %s, %s', self._uname, self._lan_server)
+                return await self.__show_devices_select_form('devices_storage_failed')
+            if user_input.get('advanced_options', False):
+                return await self.async_step_advanced_options()
+            return await self.config_flow_done()
+        except Exception as err:
+            _LOGGER.error('async_step_homes_select, %s, %s', err, traceback.format_exc())
+            raise AbortFlow(
+                reason='config_flow_error',
+                description_placeholders={
+                    'error': f'config_flow error, {err}'
+                }
+            ) from err
+
+    async def __show_devices_select_form(self, reason: str):
+        return self.async_show_form(
+            step_id='devices_select',
+            data_schema=vol.Schema({
+                vol.Required('device_infos'): cv.multi_select(
+                    self._cc_device_list_show
+                ),
+                vol.Required(
+                    'advanced_options', default=False  # type: ignore
+                ): bool,
+            }),
+            errors={'base': reason},
+            description_placeholders={
+                'nick_name': self._nick_name,
+            },
+            last_step=False,
+        )
+
+    async def async_step_advanced_options(self, user_input: Optional[dict] = None):
+        if user_input:
+            self._action_debug = user_input.get('action_debug', self._action_debug)
+            self._display_devices_changed_notify = user_input.get(
+                'display_devices_changed_notify',
+                self._display_devices_changed_notify
+            )
+            # 设备过滤
+            if user_input.get('devices_filter', False):
+                return await self.async_step_devices_filter()
+            return await self.config_flow_done()
+        return self.async_show_form(
+            step_id='advanced_options',
+            data_schema=vol.Schema({
+                vol.Required(
+                    'devices_filter', default=False
+                ): bool,  # type: ignore
+                vol.Required(
+                    'action_debug', default=self._action_debug  # type: ignore
+                ): bool,
+                vol.Required(
+                    'display_devices_changed_notify',
+                    default=self._display_devices_changed_notify  # type: ignore
+                ): cv.multi_select(self._miot_i18n.translate(key='config.device_state')),  # type: ignore
+            }),
+            last_step=False,
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
+        return OptionsFlowHandler(config_entry)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
