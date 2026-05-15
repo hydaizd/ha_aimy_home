@@ -196,7 +196,7 @@ class AIoTHttpClient:
             'Host': self._host,
             'X-Client-BizId': 'haapi',
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer{self._access_token}',
+            'Authorization': self._access_token,
             'X-Client-AppId': self._client_id,
         }
 
