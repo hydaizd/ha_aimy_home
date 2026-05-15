@@ -105,7 +105,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._aiot_storage = self.hass.data[DOMAIN].get('aiot_storage', None)
         if not self._aiot_storage:
             self._aiot_storage = AIoTStorage(root_path=self._storage_path, loop=self._main_loop)
-            self.hass.data[DOMAIN]['aiot_storage'] = self._iot_storage
+            self.hass.data[DOMAIN]['aiot_storage'] = self._aiot_storage
             _LOGGER.info('async_step_user, create aiot storage, %s', self._storage_path)
 
         # AIoT 网络
@@ -248,8 +248,8 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._cc_home_info = (await self._aiot_http.get_devices_async())
             _LOGGER.info('get_homeinfos response: %s', self._cc_home_info)
             # Save auth_info
-            if not (await self._iot_storage.update_user_config_async(
-                    uname=self._username,
+            if not (await self._aiot_storage.update_user_config_async(
+                    uname=self._uname,
                     lan_server=self._lan_server,
                     config={'auth_info': self._auth_info}
             )):
