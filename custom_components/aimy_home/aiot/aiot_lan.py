@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 import aiohttp
 
-from .aiot_error import AIoTAuthError, AIoTErrorCode, AIoTHttpError
+from .aiot_error import AIoTAuthError, AIoTHttpError
 # pylint: disable=relative-beyond-top-level
 from .common import gen_device_urn, gen_device_did
 from .const import (
