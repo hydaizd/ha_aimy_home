@@ -11,7 +11,8 @@
   "integration_type": "hub",
   "requirements": [
     "paho-mqtt",
-    "psutil"
+    "psutil",
+    "python-slugify"
   ],
   "version": "v1.0.0",
   "zeroconf": [

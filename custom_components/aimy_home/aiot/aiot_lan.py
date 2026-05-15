@@ -63,13 +63,13 @@ class AIoTAuthClient:
         headers = {'content-type': 'application/json'}
         req_url = f'http://{self._auth_host}/api/basic/user/login'
         if data.get('refresh_token', None):
-            headers['Authorization'] = data['refresh_token']
-        else:
+            # 刷新token：使用refreshToken接口，带Authorization头
             req_url = f'http://{self._auth_host}/api/basic/user/refreshToken'
+            headers['Authorization'] = data['refresh_token']
 
         http_res = await self._session.post(
             url=req_url,
-            params=(json.dumps(data) if data.get('refresh_token', None) else None),
+            json=data if not data.get('refresh_token', None) else None,
             headers=headers,
             timeout=HTTP_API_TIMEOUT
         )
