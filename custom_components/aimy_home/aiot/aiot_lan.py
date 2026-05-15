@@ -98,14 +98,13 @@ class AIoTAuthClient:
         if not isinstance(username, str) or not isinstance(password, str):
             raise AIoTAuthError('invalid username or password')
 
-        hash_passwd = password
         md5 = hashlib.md5()
-        md5.update(hash_passwd.encode())
+        md5.update(password.encode())
 
         return await self.__get_token_async(data={
             'client_id': self._client_id,
             'username': username,
-            'passwd': hash_passwd,
+            'passwd': md5.hexdigest(),
             'device_id': self._device_id
         })
 
