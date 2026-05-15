@@ -171,6 +171,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not self._aiot_auth:
                 _LOGGER.info('async_step_auth, lan_server: %s', self._lan_server)
                 aiot_auth = AIoTAuthClient(
+                    client_id=AUTH_CLIENT_ID,
                     lan_server=self._lan_server,
                     uuid=self._uuid,
                     loop=self._main_loop

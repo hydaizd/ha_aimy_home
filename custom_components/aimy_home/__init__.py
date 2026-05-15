@@ -108,8 +108,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 device_entry = dr.async_get_device(
                     identifiers={(
                         DOMAIN,
-                        slugify_did(lan_server=config_entry.data['lan_server'], did=did))
-                    },
+                        slugify_did(lan_server=config_entry.data['lan_server'], did=did)
+                    )},
                     connections=None
                 )
                 if not device_entry:
