@@ -280,9 +280,9 @@ class AIoTHttpClient:
             'midBindIds': mid_bind_ids,
         }
         device_infos: dict = {}
-        res_obj = await self.__aimy_home_api_post_async(
+        res_obj = await self.__aimy_home_api_get_async(
             url_path='/api/basic/device/endpoint_page',
-            data=req_data
+            params=req_data
         )
         if 'data' not in res_obj:
             raise AIoTHttpError('invalid response result')
