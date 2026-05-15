@@ -10,7 +10,7 @@ from .aiot_error import AIoTSpecError, AIoTHttpError
 from .aiot_storage import AIoTStorage
 from .common import (
     AIoTHttp,
-    get_prop_group_key
+    gen_prop_group_key
 )
 from .const import (
     HTTP_API_PORT,
@@ -659,7 +659,7 @@ class AIoTSpecParser:
                 # 为None时则根据format判断平台类型
                 spec_prop.platform = self._get_platform(property_)
                 # 获取属性组key
-                spec_prop.group_key = get_prop_group_key(urn, spec_service.nnd, spec_prop.nnd)
+                spec_prop.group_key = gen_prop_group_key(urn, spec_service.nnd, spec_prop.nnd)
 
                 if 'value-list' in property_:
                     spec_prop.value_list = property_['value-list']

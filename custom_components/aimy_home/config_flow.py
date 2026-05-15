@@ -213,7 +213,6 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 'action_debug': self._action_debug,
                 'cover_dead_zone_width': self._cover_dz_width,
                 'display_devices_changed_notify': self._display_devices_changed_notify,
-                'password': self._password,
             })
 
     async def __check_auth_async(self) -> None:
@@ -223,7 +222,7 @@ class AimyHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 if not self._aiot_auth:
                     raise AIoTConfigError('auth_client_error')
-                auth_info = await self._aiot_auth.get_access_token_async()
+                auth_info = await self._aiot_auth.get_access_token_async(self._uname, self._password)
                 if not self._aiot_http:
                     self._aiot_http = AIoTHttpClient(
                         lan_server=self._lan_server,

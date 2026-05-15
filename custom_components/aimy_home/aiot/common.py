@@ -62,8 +62,8 @@ def gen_device_did(mid_bind_id: str, endpoint: str) -> str | None:
     return f'{mid_bind_id}.{endpoint}'
 
 
-def get_prop_group_key(urn: str, snnd: str, pnnd: str) -> str | None:
-    """ 获取属性组key，同组属性需要一起发送 """
+def gen_prop_group_key(urn: str, snnd: str, pnnd: str) -> str | None:
+    """ 生成属性组key，同组属性需要一起发送 """
     urn_strs: list[str] = urn.split(':')
     product_key = urn_strs[1]
     sku_id = urn_strs[2]

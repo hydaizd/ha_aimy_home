@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry, entity_registry
 
-from aiot.const import (
+from .aiot.const import (
     DOMAIN,
     SUPPORTED_PLATFORMS,
     DEFAULT_INTEGRATION_LANGUAGE
